@@ -55,7 +55,7 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6 sm:px-6 lg:py-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="display text-2xl">Settings</h1>
         <p className="mt-1 text-sm text-muted">Network and app preferences for this browser.</p>
       </div>
 

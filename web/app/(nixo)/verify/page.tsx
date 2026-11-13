@@ -5,6 +5,7 @@ import { NIXO_CONTRACT } from "@/lib/config";
 import { getCertificate, isClean, type CertificateView } from "@/lib/nixo-sdk";
 import { CertificateCard } from "@/components/CertificateCard";
 import { VerifiedPanel } from "@/components/VerifiedPanel";
+import { CheckAnyWallet } from "@/components/CheckAnyWallet";
 
 function Verify() {
   const params = useSearchParams();
@@ -90,6 +91,7 @@ function Verify() {
           )}
         </div>
       )}
+      <CheckAnyWallet />
     </div>
   );
 }

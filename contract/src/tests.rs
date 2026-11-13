@@ -110,3 +110,39 @@ fn only_owner_sets_hash() {
     ctx(accounts(1), 1_000);
     c.set_checker_hash(Checker { hash: H2.into(), url: "https://example.com/x.wasm".into() });
 }
+
+#[test]
+fn taint_path_with_hops_is_stored_and_not_clean() {
+    let mut c = setup();
+    let mut o = out("alice.testnet", "rejected", Some("taint_path"));
+    o["hops"] = json!(4); // extra field from the multi-hop checker
+    o["trace_depth"] = json!(6);
+    assert!(c.resolve_nixo(alice(), H1.into(), Ok(Some(o))).is_some());
+    assert!(!c.is_clean(alice()));
+    let cert = c.certs.get(&alice()).unwrap();
+    assert_eq!((cert.reason.as_deref(), cert.trace_depth), (Some("taint_path"), 6));
+}
+
+#[test]
+fn warn_is_stored_but_not_clean() {
+    let mut c = setup();
+    assert!(c.resolve_nixo(alice(), H1.into(), Ok(Some(out("alice.testnet", "warn", Some("taint_path"))))).is_some());
+    assert!(!c.is_clean(alice()));
+    assert_eq!(c.certs.get(&alice()).unwrap().verdict, "warn");
+}
+
+#[test]
+fn caller_supplied_history_is_never_certified() {
+    let mut c = setup();
+    let mut o = out("alice.testnet", "clean", None);
+    o["history_source"] = json!("caller_supplied");
+    assert!(c.resolve_nixo(alice(), H1.into(), Ok(Some(o))).is_none());
+    assert!(!c.is_clean(alice()));
+    assert!(c.certs.get(&alice()).is_none());
+}
+
+#[test]
+fn non_clean_without_reason_is_refused() {
+    let mut c = setup();
+    assert!(c.resolve_nixo(alice(), H1.into(), Ok(Some(out("alice.testnet", "rejected", None)))).is_none());
+}

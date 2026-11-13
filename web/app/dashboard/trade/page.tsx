@@ -70,7 +70,7 @@ export default function TradePage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="mr-1 text-xl font-semibold tracking-tight">AI Trading</h1>
+          <h1 className="display mr-1 text-lg">AI Trading</h1>
           {running && session ? (
             <>
               <span className="rounded-full border border-accent-2/40 bg-accent-2/10 px-2 py-0.5 font-mono text-[11px] text-accent-2">PAPER</span>

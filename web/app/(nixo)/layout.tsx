@@ -1,26 +1,12 @@
-import Link from "next/link";
+import { SiteNav, SiteFooter } from "@/components/site/SiteNav";
 
-export default function NixoLayout({ children }: { children: React.ReactNode }) {
+/** Public pages (exchange view): site header and footer, no wallet needed. */
+export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <header className="border-b border-border">
-        <nav className="mx-auto flex max-w-3xl items-center gap-6 px-4 py-4">
-          <Link href="/" className="font-semibold tracking-tight">
-            NIXO
-          </Link>
-          <Link href="/" className="text-sm text-muted hover:text-foreground">
-            Prove funds
-          </Link>
-          <Link href="/verify" className="text-sm text-muted hover:text-foreground">
-            Verify (exchange)
-          </Link>
-          <Link href="/trade" className="text-sm text-muted hover:text-foreground">
-            Trade
-          </Link>
-          <span className="ml-auto rounded-full bg-mock-bg px-2 py-0.5 text-xs text-mock">testnet</span>
-        </nav>
-      </header>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">{children}</main>
+      <SiteNav />
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-12 sm:px-6">{children}</main>
+      <SiteFooter />
     </>
   );
 }

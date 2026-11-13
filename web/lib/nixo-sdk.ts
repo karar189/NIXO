@@ -4,7 +4,7 @@ import { NEAR_RPC, NIXO_CONTRACT } from "./config";
 
 export type Certificate = {
   account: string;
-  verdict: "clean" | "rejected";
+  verdict: "clean" | "warn" | "rejected";
   reason: string | null;
   checker_hash: string;
   checker_version: string;

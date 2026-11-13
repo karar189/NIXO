@@ -37,7 +37,7 @@ pub struct PendingChecker {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Certificate {
     pub account: AccountId,
-    /// "clean" or "rejected".
+    /// "clean", "warn" or "rejected". Only "clean" makes is_clean true.
     pub verdict: String,
     pub reason: Option<String>,
     pub checker_hash: String,
@@ -172,10 +172,18 @@ impl Nixo {
         if self.revoked.contains(checker_hash) {
             return Err("checker_revoked");
         }
-        if !matches!(out.verdict.as_str(), "clean" | "rejected") {
+        // Only histories compiled into the pinned checker can be certified. A
+        // caller-supplied history (the web "check any wallet" preview) could
+        // leave edges out, so it is never written as a certificate.
+        if out.history_source != "fixture" {
+            return Err("uncertifiable_history_source");
+        }
+        // "warn": a taint path whose only evidence is a weak pool link. Stored
+        // so the user sees why, but is_clean stays false (only "clean" passes).
+        if !matches!(out.verdict.as_str(), "clean" | "warn" | "rejected") {
             return Err("bad_verdict");
         }
-        if out.verdict == "clean" && out.reason.is_some() {
+        if (out.verdict == "clean") != out.reason.is_none() {
             return Err("bad_verdict");
         }
         let now = env::block_timestamp();

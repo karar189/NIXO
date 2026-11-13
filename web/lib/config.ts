@@ -11,3 +11,18 @@ export const DEMO_ACCOUNTS = [
   { id: "mallory", label: "nixo-mallory.testnet", note: "received funds from a demo-flagged address" },
 ] as const;
 export type DemoId = (typeof DEMO_ACCOUNTS)[number]["id"];
+
+/** Mainnet explorer for the "check any wallet" preview (taint paths are mainnet data). */
+export const MAINNET_EXPLORER = "https://nearblocks.io";
+
+/** Who flagged each listed seed, shown next to it. Mirrors checker/lists/hackers.txt. */
+export const SEED_LABELS: Record<string, { label: string; caveat: string }> = {
+  efd224256518a7cacd209867963276efed302a8e222c013c43f4b1bd369ae5af: {
+    label: "Binance hack (29 Oct 2026): main stolen-funds wallet",
+    caveat:
+      "Attributed publicly by on-chain analysts AMLBot and Shridlock on X, consistent with Elliptic. Not an official attribution.",
+  },
+};
+
+/** Mainnet accounts whose trails are cached in fixtures/mainnet (answer instantly). */
+export const CACHED_EXAMPLES = ["farstreet4572.near", "hugezest930.near", "normalherb1811.near"] as const;

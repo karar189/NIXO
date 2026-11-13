@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Michroma } from "next/font/google";
+import { WalletProvider } from "@/components/wallet/WalletProvider";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const michroma = Michroma({ variable: "--font-michroma", subsets: ["latin"], weight: "400" });
 
 export const metadata: Metadata = {
-  title: "NIXO",
-  description: "Prove your money is clean without proving where it's been.",
+  title: "NIXO: private trading, provably clean money",
+  description:
+    "Private AI trading agents on NEAR. Every deposit is checked inside a secure enclave against hack and sanctions lists; exchanges see only a Clean or Rejected certificate.",
 };
 
-// Root shell only. NIXO pages get their nav from app/(nixo)/layout.tsx;
-// the trading app under /trade has its own shell and theme.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${michroma.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
+        <WalletProvider>{children}</WalletProvider>
+      </body>
     </html>
   );
 }

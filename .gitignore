@@ -5,6 +5,7 @@ target/
 .env.local
 *.log
 .DS_Store
+fixtures/mainnet/cache/
 
 # Python
 .venv/

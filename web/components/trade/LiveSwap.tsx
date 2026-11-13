@@ -168,7 +168,7 @@ export function LiveSwap({ market, markPrice }: { market: Market; markPrice: num
         <p className="font-medium">Live swaps run on mainnet</p>
         <p className="mt-1 text-muted">
           NEAR Intents has no testnet, so live trading is off while you&apos;re on testnet. Switch to mainnet in{" "}
-          <Link href="/trade/settings" className="text-accent hover:underline">Settings</Link>. Paper trading works on both.
+          <Link href="/dashboard/settings" className="text-accent hover:underline">Settings</Link>. Paper trading works on both.
         </p>
       </div>
     );

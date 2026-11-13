@@ -26,7 +26,7 @@ pnpm demo
 `pnpm demo` opens `http://localhost:3000`:
 
 1. Click **Prove my funds are clean** as `nixo-alice.testnet` → about 1–2 minutes later, ✅ Clean certificate.
-2. Switch to `nixo-mallory.testnet` (tainted history, received from a seeded demo-flagged address) → ❌ Rejected, reason `list_hit`.
+2. Switch to `nixo-mallory.testnet` (a replay of real mainnet laundering wallet `farstreet4572.near`) → ❌ Rejected, reason `taint_path`, 4 hops from the Binance-hack wallet. The certificate shows only the reason and hop count, never the path.
 3. Open `/verify`, paste `nixo-alice.testnet` → live `is_clean` call to the NIXO contract returns ✅. Expand the Verified panel to see the WASM hash, the OutLayer attestation link, the list snapshots with hashes, and a link to the passing Kani proof.
 
 That's the whole demo. The sections below explain what each piece is and how it is built.
@@ -43,7 +43,7 @@ Honest users face a false choice: expose their entire financial history, or get 
 
 1. The user calls `request_nixo` on the NIXO contract. The only public input is their account id; the history never goes on-chain.
 2. The contract calls OutLayer's `request_execution` with the checker pinned by URL + SHA-256 (`WasmUrl` source). OutLayer yields until a registered Intel TDX worker resolves the run.
-3. Inside the enclave, the Checker (Rust to WASM) loads the user's confidential history, screens the account and every direct counterparty against lists compiled into the WASM, and emits a verdict. MVP: history comes from simulated fixtures; v1 reads it from a 1Click session inside the enclave.
+3. Inside the enclave, the Checker (Rust to WASM) loads the account's history, screens the account and every direct counterparty against lists compiled into the WASM (`list_hit`), then searches backwards up to 6 hops through transfers and Ref Finance pool hops for a path to a listed address (`taint_path`). Funds only flow forward in time, and anything it cannot fully list fails closed (`history_incomplete`). MVP: certified histories are compiled into the WASM (one synthetic, one replaying a real mainnet trail); v1 fetches them inside the enclave.
 4. OutLayer's TDX workers are registered on-chain via DCAP quote verification, and each run's attestation commits to the WASM hash, input hash and output hash.
 5. The callback `resolve_nixo` accepts the result only for the pinned, unrevoked `checker_hash` and the requesting account, stores a short-lived certificate, and emits `nixo_requested` / `nixo_resolved` / `nixo_failed` events. Anything unexpected stores nothing (fail closed).
 6. Any exchange on any chain calls `is_clean(account)` and gets ✅ or ❌, plus a Verified panel linking the attestation, list snapshots, Kani proofs and WASM hash.
@@ -141,7 +141,8 @@ pnpm demo               # starts web app at http://localhost:3000
 Then:
 
 1. Go to `/`. Pick `nixo-alice.testnet` (pre-seeded clean history) → click **Prove my funds are clean** → ✅ Clean certificate in about 1–2 minutes.
-2. Switch to `nixo-mallory.testnet` (pre-seeded with a transfer from a demo-flagged address) → ❌ Rejected, reason `list_hit`, no address revealed.
+2. Switch to `nixo-mallory.testnet` (replays `farstreet4572.near`'s real mainnet trail) → ❌ Rejected, reason `taint_path`, 4 hops; no address revealed on-chain.
+4. On `/verify`, under **Check any NEAR wallet**, trace `farstreet4572.near`, `hugezest930.near` or `normalherb1811.near` (cached) or paste any mainnet account: you get the verdict and, for a taint path, every hop with its amount and a nearblocks.io link. This is a preview, not a certificate.
 3. Go to `/verify`, paste `nixo-alice.testnet` → live `is_clean` view call → ✅. Expand the Verified panel.
 
 ### Run the checker alone
@@ -202,10 +203,11 @@ nixo/
 | Checker core (`verdict()` function) | Real, pure Rust, Kani-proven |
 | OutLayer integration (`request_execution`, callback) | Real, testnet |
 | NEAR verifier contract with hash pinning, timelock, revocation, expiry | Real, on `nixo.testnet` |
-| Confidential history | **Simulated**: fixtures compiled into the checker for the two demo accounts; unknown accounts fail closed with `history_unavailable`. 1Click session reads are v1 |
+| Account histories | **Real mainnet data, fetched outside the TEE.** `scripts/fetch-history.ts` pulls receipts and Ref swaps from the NearBlocks API v3 and caches them in `fixtures/mainnet/`. `nixo-mallory.testnet` replays `farstreet4572.near`'s real trail (only the name changes); `nixo-alice.testnet` is still synthetic. Unknown accounts fail closed (`history_unavailable`). Fetching inside the enclave is v1 |
 | Sanctions lists | Real: OFAC, EU, UK, UN and SECO EVM addresses from `safe-fndn/sanctions-address-lists` release `data-2026-10-29` |
-| Hacker list | **Demo only**: one synthetic address so `nixo-mallory.testnet` reliably fails; curated, sourced entries are v1 |
-| Hop tracing | Depth 1 (the account and its direct counterparties) over the fixture history |
+| Hacker list | **Real, one entry**: the Binance-hack (29 Oct 2026) stolen-funds wallet `efd2…e5af`, attributed publicly by on-chain analysts AMLBot and Shridlock (consistent with Elliptic). **Not an official attribution.** The synthetic demo address is gone |
+| Hop tracing | **Real**: up to 6 hops backwards through NEAR transfers and Ref Finance pool hops (swap in and opposite swap out of the same pool within 120 s, amounts within ±15%; 12–15% is a weak link → `warn`). Time-ordered, deterministic, Kani-proven on small graphs. Not traced yet: token transfers other than Ref swaps, other DEXes, bridges, intents.near balances (inflows from those fail closed) |
+| Check any wallet (`/verify`) | **Preview only**: the history is fetched outside the TEE and passed in, so the result is `history_source: caller_supplied` and the contract refuses to certify it. Runs the same checker source built for `wasm32-wasip1` (Node WASI), so its hash differs from the pinned OutLayer build |
 | NEAR AI Cloud explainer | Real call; attestation fetched with a fresh nonce, full quote verification is v1 |
 | Encrypting the session to the enclave key | Not in MVP (no history leaves the enclave because none enters through public input) |
 | Chain Signatures cross-chain relayer | Not built, v2 |
@@ -248,6 +250,15 @@ fn tainted_is_never_clean() {
 // + empty_list_is_never_clean, disjoint_is_clean, tainted_is_never_clean_addr ([u8; 32])
 ```
 
+The multi-hop search (`checker/src/trace.rs`, `search()`) is also pure and proven. Four more harnesses, over symbolic graphs of up to 4 links on 4 nodes with symbolic times, weak flags, listed/complete flags and hop limits up to 3:
+
+| Harness | Property |
+|---|---|
+| `path_respects_hop_limit_and_is_a_real_chain` | The search stops within the hop limit: any path it returns has at most `max_hops` links, starts at a listed node, ends at the checked account, is connected, and is strictly time-ordered |
+| `listed_subject_is_never_clean` | A listed address is always rejected |
+| `reachable_seed_within_limit_is_never_clean` | A listed node that reaches the account through a time-ordered chain within the limit never yields Clean |
+| `raising_hop_limit_never_cleans` | Raising the hop limit never turns a non-Clean result into Clean |
+
 Run the proofs:
 
 ```bash
@@ -259,9 +270,9 @@ cargo kani                      # VERIFICATION:- SUCCESSFUL
 
 CI runs Kani on every push and fails the build if any proof regresses. The Verified panel links to the CI run.
 
-**What this proves:** for all inputs up to the bound (up to 8 traced × 8 banned addresses, and 3 × 3 on the production 32-byte address type), the rule is exactly "Clean iff the list is non-empty and disjoint from the traced set".
+**What this proves:** for all inputs up to the bound (up to 8 traced × 8 banned addresses, and 3 × 3 on the production 32-byte address type), the list rule is exactly "Clean iff the list is non-empty and disjoint from the traced set"; and for all graphs up to the bound, the multi-hop search has the four properties above. Real histories are bigger than the bound: the proofs cover the algorithm's logic, not every input size.
 
-**What it does not prove:** that the lists are complete, that hop tracing found every counterparty, or that the shell passed the right data. Those are covered by other measures in the table above.
+**What it does not prove:** that the lists are complete, that the fetcher found every inflow (it runs outside the TEE: a fetcher that drops an edge can turn a Rejected into a Clean in the preview; certified histories are pinned in the WASM), that the attribution of a listed wallet is correct, or that the shell passed the right data. Those are covered by other measures in the table above.
 
 ## Related work
 

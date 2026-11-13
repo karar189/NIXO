@@ -12,10 +12,11 @@ function shortAccount(id: string) {
 }
 
 export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { accountId, disconnect, network } = useWallet();
+  const { accountId, disconnect, network, walletName } = useWallet();
   const router = useRouter();
   const pathname = usePathname();
-  const title = { "/trade/agent": "AI Trading", "/trade/settings": "Settings" }[pathname] ?? "Dashboard";
+  const title =
+    { "/dashboard/trade": "AI Trading", "/dashboard/settings": "Settings", "/dashboard/clean-funds": "Clean funds" }[pathname] ?? "Overview";
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -45,7 +46,7 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
   async function onDisconnect() {
     setMenuOpen(false);
     await disconnect();
-    router.replace("/trade/about");
+    router.replace("/");
   }
 
   return (
@@ -60,7 +61,7 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
           <Menu className="size-5" />
         </button>
         <nav aria-label="Breadcrumb">
-          <span className="text-sm font-medium">{title}</span>
+          <span className="display text-[12px] tracking-[0.14em] text-foreground">{title}</span>
         </nav>
       </div>
 
@@ -78,7 +79,7 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
-            <span className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-2 font-mono text-[11px] font-semibold uppercase text-background">
+            <span className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-accent to-deep font-mono text-[11px] font-semibold uppercase text-white">
               {accountId[0]}
             </span>
             <span className="max-w-[9rem] truncate font-mono text-xs sm:max-w-none">{shortAccount(accountId)}</span>
@@ -91,7 +92,7 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
               className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-line bg-surface shadow-2xl shadow-black/50"
             >
               <div className="border-b border-line px-4 py-3">
-                <p className="text-[11px] uppercase tracking-wider text-muted">Connected with Meteor</p>
+                <p className="kicker">Connected{walletName ? ` with ${walletName}` : ""}</p>
                 <p className="mt-1 break-all font-mono text-xs">{accountId}</p>
               </div>
               <button type="button" role="menuitem" onClick={copy} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-muted hover:bg-surface-2 hover:text-foreground">

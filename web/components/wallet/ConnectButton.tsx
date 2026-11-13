@@ -1,48 +1,51 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowUpRight, Wallet } from "lucide-react";
 import { useWallet } from "./WalletProvider";
 
-const styles = {
-  primary:
-    "rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition hover:brightness-110 disabled:opacity-60",
-  compact:
-    "rounded-full bg-accent px-4 py-2 text-sm font-medium text-background transition hover:brightness-110 disabled:opacity-60",
-};
-
-export function ConnectButton({
-  variant = "compact",
-  showError = false,
-}: {
-  variant?: keyof typeof styles;
-  showError?: boolean;
-}) {
+/**
+ * "Connect wallet" opens the NEAR wallet picker (Meteor, MyNearWallet, HERE,
+ * Sender, Intear, Nightly). Once signed in it becomes "Open dashboard"; a
+ * sign-in started here goes straight to the dashboard.
+ */
+export function ConnectButton({ variant = "compact", showError = false }: { variant?: "primary" | "compact"; showError?: boolean }) {
   const { ready, accountId, connecting, error, connect } = useWallet();
   const router = useRouter();
+  const requested = useRef(false);
+
+  useEffect(() => {
+    if (accountId && requested.current) {
+      requested.current = false;
+      router.push("/dashboard");
+    }
+  }, [accountId, router]);
+
+  const cls = variant === "primary" ? "btn-primary" : "btn-primary !px-4 !py-2 !text-[11px]";
 
   if (accountId) {
     return (
-      <Link href="/trade" className={styles[variant]}>
-        Open dashboard
+      <Link href="/dashboard" className={cls}>
+        Open dashboard <ArrowUpRight className="size-3.5" />
       </Link>
     );
-  }
-
-  async function onClick() {
-    const id = await connect();
-    if (id) router.push("/trade");
   }
 
   return (
     <span className="inline-flex flex-col items-start gap-2">
       <button
         type="button"
-        onClick={onClick}
+        onClick={() => {
+          requested.current = true;
+          void connect();
+        }}
         disabled={!ready || connecting}
-        className={styles[variant]}
+        className={cls}
       >
-        {connecting ? "Connecting…" : "Connect Meteor Wallet"}
+        <Wallet className="size-3.5" />
+        {connecting ? "Connecting…" : "Connect wallet"}
       </button>
       {showError && error && (
         <span role="alert" className="text-xs text-danger">

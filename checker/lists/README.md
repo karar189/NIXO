@@ -6,6 +6,6 @@ Compiled into the checker WASM with `include_str!`, so the WASM hash pins the li
 |------|--------|----------|
 | `us-ofac.txt`, `eu.txt`, `uk.txt`, `un.txt`, `ch-seco.txt` | [safe-fndn/sanctions-address-lists](https://github.com/safe-fndn/sanctions-address-lists) release `data-2026-10-29` (EVM addresses only) | 2026-10-29 |
 | `manifest.json` | Same release, source hashes and fetch metadata | 2026-10-29 |
-| `hackers.txt` | Curated by NIXO; currently only a synthetic demo address | n/a |
+| `hackers.txt` | Curated by NIXO: the Binance-hack (29 Oct 2026) stolen-funds wallet on NEAR, attributed by AMLBot/Shridlock (unofficial) | see comments in the file |
 
 Refresh: `scripts/update-lists.sh <release-tag>`, then rebuild the WASM and propose the new hash on-chain.

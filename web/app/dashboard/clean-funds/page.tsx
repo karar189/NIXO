@@ -56,9 +56,10 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
       <section>
-        <h1 className="text-3xl font-semibold tracking-tight">Prove your money is clean without proving where it&apos;s been.</h1>
+        <p className="kicker">Clean funds · NIXO certificate</p>
+        <h1 className="display mt-3 text-[clamp(1.3rem,2.6vw,1.9rem)] leading-snug">Prove your money is clean without proving where it&apos;s been.</h1>
         <p className="mt-3 text-muted">
           A sealed Intel TDX enclave screens your confidential history against sanctions and hacker lists and outputs only a verdict. NEAR records it as a
           7-day certificate any exchange can check with one call.

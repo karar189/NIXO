@@ -4,8 +4,13 @@
 //! (see `proofs/verdict.rs`). Everything that touches bytes (parsing, hashing,
 //! list loading, encoding) lives in [`shell`] and can only *feed* the core; it
 //! has no path to `Verdict::Clean` except through `verdict()`.
+//!
+//! Multi-hop tracing lives in [`trace`], also pure and Kani-proven. The shell
+//! runs `verdict()` first (list hits on the account and its direct
+//! counterparties), then `trace::search()` for paths up to `trace::MAX_HOPS`.
 
 pub mod shell;
+pub mod trace;
 
 /// A normalized address: SHA-256 of the canonical address string.
 pub type Addr = [u8; 32];
@@ -21,6 +26,11 @@ pub enum Reason {
     MalformedInput,
     /// No confidential history could be loaded for the account.
     HistoryUnavailable,
+    /// A listed address reaches the account through a chain of transfers
+    /// and/or pool hops within the hop limit.
+    TaintPath,
+    /// Part of the history needed within the hop limit could not be listed.
+    HistoryIncomplete,
 }
 
 impl Reason {
@@ -30,6 +40,8 @@ impl Reason {
             Reason::ListUnavailable => "list_unavailable",
             Reason::MalformedInput => "malformed_input",
             Reason::HistoryUnavailable => "history_unavailable",
+            Reason::TaintPath => "taint_path",
+            Reason::HistoryIncomplete => "history_incomplete",
         }
     }
 }
@@ -37,6 +49,9 @@ impl Reason {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
     Clean,
+    /// Not Clean, but the only evidence is a weak link (a pool hop at the edge
+    /// of tolerance). `is_clean` stays false; a human should look.
+    Warn(Reason),
     Rejected(Reason),
 }
 

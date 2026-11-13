@@ -15,7 +15,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   // Dashboard is wallet-gated: once the session is restored, send guests home.
   useEffect(() => {
-    if (ready && !accountId) router.replace("/trade/about");
+    if (ready && !accountId) router.replace("/");
   }, [ready, accountId, router]);
 
   if (!accountId) {

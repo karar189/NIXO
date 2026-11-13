@@ -9,11 +9,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { InjectedWallet, WalletSelector } from "@near-wallet-selector/core";
+import "@near-wallet-selector/modal-ui/styles.css";
+import type { WalletSelector } from "@near-wallet-selector/core";
+import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import type { FinalExecutionOutcome } from "@near-js/types";
 import {
   DEFAULT_NETWORK,
-  METEOR_WALLET_ID,
   readStoredNetwork,
   storeNetwork,
   type NearNetwork,
@@ -33,8 +34,11 @@ type WalletContextValue = {
   ready: boolean;
   network: NearNetwork;
   accountId: string | null;
+  /** Name of the wallet the active account signed in with, e.g. "Meteor Wallet". */
+  walletName: string | null;
   connecting: boolean;
   error: string | null;
+  /** Opens the wallet picker (Meteor, MyNearWallet, HERE, Sender, Intear, Nightly…). */
   connect: () => Promise<string | null>;
   disconnect: () => Promise<void>;
   /** Signs out, stores the new network and reloads so the wallet re-initialises on it. */
@@ -47,6 +51,8 @@ const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [selector, setSelector] = useState<WalletSelector | null>(null);
+  const [modal, setModal] = useState<WalletSelectorModal | null>(null);
+  const [walletName, setWalletName] = useState<string | null>(null);
   const [network, setNetwork] = useState<NearNetwork>(DEFAULT_NETWORK);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -60,25 +66,46 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         // Loaded on the client only: the wallet SDKs touch `window`.
-        const [{ setupWalletSelector }, { setupMeteorWallet }] = await Promise.all([
+        const [core, modalUi, meteor, mnw, here, sender, intear, nightly] = await Promise.all([
           import("@near-wallet-selector/core"),
+          import("@near-wallet-selector/modal-ui"),
           import("@near-wallet-selector/meteor-wallet"),
+          import("@near-wallet-selector/my-near-wallet"),
+          import("@near-wallet-selector/here-wallet"),
+          import("@near-wallet-selector/sender"),
+          import("@near-wallet-selector/intear-wallet"),
+          import("@near-wallet-selector/nightly"),
         ]);
-        const instance = await setupWalletSelector({
+        const instance = await core.setupWalletSelector({
           network: chosen,
-          modules: [setupMeteorWallet()],
+          modules: [
+            meteor.setupMeteorWallet(),
+            mnw.setupMyNearWallet(),
+            here.setupHereWallet(),
+            sender.setupSender(),
+            intear.setupIntearWallet(),
+            nightly.setupNightly(),
+          ],
         });
+        // No contractId: sign in without creating a function-call key.
+        const picker = modalUi.setupModal(instance, { theme: "dark" });
         if (cancelled) return;
 
         const sync = () => {
-          const active = instance.store.getState().accounts.find((a) => a.active);
+          const state = instance.store.getState();
+          const active = state.accounts.find((a) => a.active);
           setAccountId(active?.accountId ?? null);
+          const mod = state.modules.find((m) => m.id === state.selectedWalletId);
+          setWalletName(active ? (mod?.metadata.name ?? null) : null);
+          if (active) setConnecting(false);
         };
         sync();
         const sub = instance.store.observable.subscribe(sync);
         unsubscribe = () => sub.unsubscribe();
         setNetwork(chosen);
         setSelector(instance);
+        setModal(picker);
+        picker.on("onHide", () => setConnecting(false));
       } catch (err) {
         if (!cancelled) setError(`Wallet setup failed: ${(err as Error).message}`);
       }
@@ -91,26 +118,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connect = useCallback(async () => {
-    if (!selector) return null;
-    setConnecting(true);
+    if (!selector || !modal) return null;
     setError(null);
-    try {
-      const wallet = await selector.wallet<InjectedWallet>(METEOR_WALLET_ID);
-      // No contractId: sign in without creating a function-call key yet.
-      const accounts = await wallet.signIn({});
-      return accounts[0]?.accountId ?? null;
-    } catch (err) {
-      const message = (err as Error).message ?? "";
-      setError(
-        /reject|cancel|closed/i.test(message)
-          ? "Connection cancelled in Meteor."
-          : message || "Couldn't connect to Meteor Wallet.",
-      );
-      return null;
-    } finally {
-      setConnecting(false);
-    }
-  }, [selector]);
+    setConnecting(true);
+    // The picker resolves through the selector store (see `sync` above).
+    modal.show();
+    return null;
+  }, [selector, modal]);
 
   const disconnect = useCallback(async () => {
     if (!selector || !selector.isSignedIn()) return;
@@ -137,7 +151,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (!selector || !accountId) throw new Error("Connect your wallet first");
       const [{ actionCreators }, wallet] = await Promise.all([
         import("@near-wallet-selector/core"),
-        selector.wallet<InjectedWallet>(METEOR_WALLET_ID),
+        selector.wallet(),
       ]);
       const outcomes = await wallet.signAndSendTransactions({
         transactions: txs.map((tx) => ({
@@ -158,6 +172,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       ready: selector !== null || error !== null,
       network,
       accountId,
+      walletName,
       connecting,
       error,
       connect,
@@ -165,7 +180,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       switchNetwork,
       signAndSend,
     }),
-    [selector, network, accountId, connecting, error, connect, disconnect, switchNetwork, signAndSend],
+    [selector, network, accountId, walletName, connecting, error, connect, disconnect, switchNetwork, signAndSend],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

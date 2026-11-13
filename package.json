@@ -15,7 +15,10 @@
     "test": "cd checker && cargo test && cd ../contract && cargo test && cd ../agents && .venv/bin/pytest -q",
     "kani": "cd checker && cargo kani",
     "checker:run": "scripts/run-checker.sh",
-    "test:backend": "cd backend && npm test"
+    "test:backend": "cd backend && npm test",
+    "fetch-history": "pnpm --filter web exec tsx ../scripts/fetch-history.ts",
+    "make-replay": "pnpm --filter web exec tsx ../scripts/make-replay.ts",
+    "build:checker-preview": "cd checker && cargo build --release --locked --target wasm32-wasip1 && cp target/wasm32-wasip1/release/nixo_checker.wasm ../web/lib/checker/nixo_checker_preview.wasm && shasum -a 256 ../web/lib/checker/nixo_checker_preview.wasm"
   },
   "pnpm": {
     "packageExtensions": {
