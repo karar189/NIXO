@@ -45,6 +45,11 @@
   --color-reject-bg: var(--reject-bg);
   --color-mock: var(--mock);
   --color-mock-bg: var(--mock-bg);
+  /* Extra tokens used only by the trading app (.theme-arc). */
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-accent-2: var(--accent-2);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -52,4 +57,50 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* ---- Trading app (/trade), imported from NearArc ------------------------
+   Dark-only palette, scoped so it never changes NIXO's own pages. The same
+   token names (--background, --surface, --muted, --accent) are redefined here,
+   so Tailwind utilities like bg-surface resolve to the NearArc colours inside
+   .theme-arc and to NIXO's colours everywhere else. */
+.theme-arc {
+  --background: #07090c;
+  --surface: #0d1116;
+  --surface-2: #121820;
+  --line: #1c242e;
+  --border: #1c242e;
+  --foreground: #e8edf2;
+  --muted: #8b97a4;
+  --accent: #5ef2b7;
+  --accent-2: #7aa2ff;
+  --danger: #ff7a7a;
+  color-scheme: dark;
+}
+
+.theme-arc ::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.theme-arc :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.theme-arc .grid-bg {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 30%, transparent 75%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-arc *,
+  .theme-arc *::before,
+  .theme-arc *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

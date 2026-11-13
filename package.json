@@ -10,5 +10,14 @@
     "test": "cd checker && cargo test && cd ../contract && cargo test",
     "kani": "cd checker && cargo kani",
     "checker:run": "scripts/run-checker.sh"
+  },
+  "pnpm": {
+    "packageExtensions": {
+      "@near-wallet-selector/meteor-wallet@10.1.4": {
+        "dependencies": {
+          "near-api-js": "6.5.1"
+        }
+      }
+    }
   }
 }

@@ -9,6 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@near-js/types": "^2.3.0",
+    "@near-wallet-selector/core": "^10.1.4",
+    "@near-wallet-selector/meteor-wallet": "^10.1.4",
+    "lucide-react": "^1.72.0",
     "near-api-js": "^7.5.3",
     "next": "16.4.6",
     "react": "19.3.0",
@@ -19,6 +23,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "4.3.3",
