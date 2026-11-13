@@ -1,0 +1,7 @@
+{
+  "account": "nixo-mallory.testnet",
+  "history": [
+    {"tx_id": "demo-m1", "chain": "near", "direction": "in",  "counterparty": "nixo-demo-flagged.testnet", "asset": "nep141:usdc.fakes.testnet", "amount": "9800.00"},
+    {"tx_id": "demo-m2", "chain": "near", "direction": "out", "counterparty": "bob.testnet",               "asset": "nep141:usdc.fakes.testnet", "amount": "500.00"}
+  ]
+}

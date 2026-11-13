@@ -1,0 +1,8 @@
+{
+  "account": "nixo-alice.testnet",
+  "history": [
+    {"tx_id": "demo-a1", "chain": "near", "direction": "in",  "counterparty": "faucet.testnet",  "asset": "nep141:usdc.fakes.testnet", "amount": "250.00"},
+    {"tx_id": "demo-a2", "chain": "near", "direction": "out", "counterparty": "bob.testnet",     "asset": "nep141:usdc.fakes.testnet", "amount": "40.00"},
+    {"tx_id": "demo-a3", "chain": "near", "direction": "out", "counterparty": "coffee.testnet",  "asset": "native:near",               "amount": "1.50"}
+  ]
+}

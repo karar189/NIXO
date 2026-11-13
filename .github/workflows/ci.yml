@@ -1,0 +1,48 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  checker:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: checker } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show # installs the toolchain pinned in rust-toolchain.toml
+      - run: cargo test --locked
+      - run: cargo build --release --locked --target wasm32-wasip2
+      - name: Publish WASM hash
+        run: |
+          H=$(sha256sum target/wasm32-wasip2/release/nixo_checker.wasm | cut -d' ' -f1)
+          echo "checker_hash=$H" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nixo_checker.wasm
+          path: checker/target/wasm32-wasip2/release/nixo_checker.wasm
+
+  kani:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: model-checking/kani-github-action@v1
+        with:
+          working-directory: checker
+          args: --lib
+
+  contract:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: contract } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: cargo test --locked
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web lint
+      - run: pnpm --filter web build

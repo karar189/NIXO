@@ -9,12 +9,12 @@ Built for **NEAR HACKATHON** (1–14 Nov 2026). Tracks: **Privacy & Private AI**
 - **Live demo:** hosted URL here
 - **Verifier contract:** `nixo.testnet` (mainnet `nixo.near` at v1)
 - **Checker source:** `/checker` in this repo, pinned by hash on-chain
-- **Kani proofs:** `/proofs`, CI badge above
+- **Kani proofs:** `/checker/proofs/verdict.rs`, run in CI (`.github/workflows/ci.yml`)
 - **License:** MIT
 
 ## Judge it in 90 seconds
 
-No real funds, no keys, no mainnet. Two pre-seeded testnet wallets, one clean and one tainted.
+No real funds, no wallet, no mainnet. Two pre-seeded testnet accounts, one clean and one tainted. The hosted demo needs nothing; running locally needs the two demo testnet keys in `web/.env` (see Setup).
 
 ```bash
 git clone https://github.com/<your-org>/nixo
@@ -25,9 +25,9 @@ pnpm demo
 
 `pnpm demo` opens `http://localhost:3000`:
 
-1. Click **Get NIXO** as `alice.testnet` → ~15s later, ✅ Clean certificate.
-2. Switch to `mallory.testnet` (tainted history, received from a seeded demo-flagged address) → ❌ Rejected, reason `list_hit`.
-3. Open `/verify`, paste `alice.testnet` → live `is_clean` call to the NIXO contract returns ✅. Expand the Verified panel to see the WASM hash, the OutLayer attestation link, the list snapshots with hashes, and a link to the passing Kani proof.
+1. Click **Prove my funds are clean** as `nixo-alice.testnet` → about 1–2 minutes later, ✅ Clean certificate.
+2. Switch to `nixo-mallory.testnet` (tainted history, received from a seeded demo-flagged address) → ❌ Rejected, reason `list_hit`.
+3. Open `/verify`, paste `nixo-alice.testnet` → live `is_clean` call to the NIXO contract returns ✅. Expand the Verified panel to see the WASM hash, the OutLayer attestation link, the list snapshots with hashes, and a link to the passing Kani proof.
 
 That's the whole demo. The sections below explain what each piece is and how it is built.
 
@@ -41,18 +41,18 @@ Honest users face a false choice: expose their entire financial history, or get 
 
 ## How NIXO works
 
-1. The user signs a 1Click session in their wallet and encrypts it to the enclave's derived key.
-2. The user calls `request_nixo` on the NIXO contract, which hands the job to OutLayer via NEAR's yield/resume flow.
-3. Inside an Intel TDX enclave, the Checker (Rust to WASM, under 300 lines) decrypts the session, reads the user's confidential history from 1Click, fetches pinned sanctions and hacker lists, traces counterparties for 1–2 hops, and emits a verdict.
-4. OutLayer returns the result with a TDX attestation chained to Intel's root certificate.
-5. The contract verifies the attestation against its pinned `checker_hash`, stores a short-lived certificate, and emits a `NixoRequested` / `NixoResolved` event.
+1. The user calls `request_nixo` on the NIXO contract. The only public input is their account id; the history never goes on-chain.
+2. The contract calls OutLayer's `request_execution` with the checker pinned by URL + SHA-256 (`WasmUrl` source). OutLayer yields until a registered Intel TDX worker resolves the run.
+3. Inside the enclave, the Checker (Rust to WASM) loads the user's confidential history, screens the account and every direct counterparty against lists compiled into the WASM, and emits a verdict. MVP: history comes from simulated fixtures; v1 reads it from a 1Click session inside the enclave.
+4. OutLayer's TDX workers are registered on-chain via DCAP quote verification, and each run's attestation commits to the WASM hash, input hash and output hash.
+5. The callback `resolve_nixo` accepts the result only for the pinned, unrevoked `checker_hash` and the requesting account, stores a short-lived certificate, and emits `nixo_requested` / `nixo_resolved` / `nixo_failed` events. Anything unexpected stores nothing (fail closed).
 6. Any exchange on any chain calls `is_clean(account)` and gets ✅ or ❌, plus a Verified panel linking the attestation, list snapshots, Kani proofs and WASM hash.
 
 | # | Component | What it does | Tech |
 |---|-----------|--------------|------|
 | 1 | Checker | Deterministic Rust rule; returns `Clean` or `Rejected(reason)`; the only code inside the TEE | Rust → `wasm32-wasip2` on OutLayer (Intel TDX) |
 | 2 | Verifier contract | Pins the checker code hash, calls OutLayer, verifies attestation, stores certificates, exposes `is_clean` | NEAR smart contract, `nixo.near` |
-| 3 | Data sources | User's confidential history; OFAC + EU + UN + hacker lists; public chain data for hop tracing | NEAR Intents 1Click, `safe-fndn/sanctions-address-lists`, public RPCs |
+| 3 | Data sources | User's confidential history; OFAC + EU + UK + UN + SECO EVM address lists + hacker list | Fixtures in MVP (1Click in v1), `safe-fndn/sanctions-address-lists` release `data-2026-10-29` |
 | 4 | Verification SDK | One view call for exchanges; a cross-chain relayer posts certificate digests to registries on other chains | TypeScript / Python SDK, NEAR Chain Signatures for cross-chain |
 | 5 | Explainer | Turns the certificate into a plain-English compliance note for users and officers; model never sees the user's history | NEAR AI Cloud, attested with a fresh nonce |
 
@@ -76,31 +76,32 @@ NEAR AI's own docs admit a TEE protects data from the server operator but does n
 |---------|--------------|-------------------------|
 | Minimal trusted base | The proven core is a pure function under 300 lines; fetching, parsing and encoding sit outside it | Bugs in glue code cannot flip a verdict |
 | Reproducible build | Pinned toolchain, `Cargo.lock`, build container; CI publishes the WASM hash and anyone can rebuild and match it | A WASM that does not match its published source |
-| Pinned hash on-chain | The contract accepts results only from the current `checker_hash`; changes are timelocked 48h and public | Silent code swaps, including by us |
+| Pinned hash on-chain | The contract asks OutLayer to run only the current `checker_hash` and binds the result to it; changes are timelocked (48h on mainnet, 5 min on testnet for the demo) and public | Silent code swaps, including by us |
 | Fail closed | Every error path returns `Rejected` with a reason code; `Clean` is reachable only through the proven disjointness check | A bug producing a false clean |
 | Local re-run | The checker is deterministic; a user can run the same WASM with wasmtime and compare output hashes | A worker returning a different answer than the code would |
 | Revocation + expiry | Certificates expire (7 days default); `revoke_checker_hash` kills every certificate from a version at once | A bug found after certificates were issued |
-| Formal verification (Kani) | Mathematical proof that if any traced address is on the banned list, the verdict is never `Clean` | Logic bugs in the core rule |
+| Formal verification (Kani) | Proofs that a tainted input is never `Clean`, an empty list is never `Clean`, and disjoint inputs are always `Clean` | Logic bugs in the core rule |
 
 A TEE proves the code was not tampered with. NIXO shows the code is right.
 
 ## How NEAR is used
 
-Five NEAR components do real work here, named in code.
+Four NEAR components do real work in the MVP, named in code; Chain Signatures is planned for v1.
 
-- **OutLayer (Intel TDX)** runs the Checker WASM and returns a signed attestation. Code at `/checker`, WASM published on each release, hash pinned on-chain. OutLayer integration at `/contract/src/outlayer.rs`.
-- **NEAR smart contract** (`nixo.testnet`) at `/contract`. Methods: `request_nixo`, `resolve_nixo` (yield/resume callback), `is_clean`, `get_certificate`, `set_checker_hash` (owner, timelocked), `revoke_checker_hash` (owner). Written in Rust with `near-sdk`.
-- **NEAR Intents 1Click** supplies the user's confidential balance and history via a signed session, encrypted to the enclave's derived key. Adapter at `/checker/src/sources/intents.rs`. Testnet uses 1Click dry-run quotes; mainnet uses real session reads.
+- **OutLayer (Intel TDX)** runs the Checker WASM. Code at `/checker`, hash pinned on-chain. OutLayer integration at `/contract/src/outlayer.rs`.
+- **NEAR smart contract** (`nixo.testnet`) at `/contract`. Methods: `request_nixo`, `resolve_nixo` (OutLayer callback), `is_clean`, `get_certificate`, `get_config`, `set_checker_hash` (owner, proposes, timelocked), `apply_checker_hash` (anyone, after timelock), `cancel_checker_hash` and `revoke_checker_hash` (owner). Written in Rust with `near-sdk` 5.
+- **NEAR Intents 1Click** (v1) will supply the user's confidential history via a session read inside the enclave. In the MVP the history adapter (`load_history` in `/checker/src/shell.rs`) reads simulated fixtures compiled into the WASM.
 - **NEAR Chain Signatures (v1)** post certificate digests to registry contracts on Ethereum, Base, Solana and Arbitrum, so a verifier on another chain can read the result without a NEAR integration. Relayer at `/relayer`. Not in the MVP; stub included.
-- **NEAR AI Cloud** powers the Explainer. OpenAI-compatible call to `https://cloud-api.near.ai/v1`, attestation fetched with a fresh nonce and verified client-side. Code at `/web/lib/explainer.ts`. The model never receives the user's history, only the public certificate.
+- **NEAR AI Cloud** powers the Explainer. OpenAI-compatible call to `https://cloud-api.near.ai/v1`, attestation fetched with a fresh nonce and verified client-side. Code at `/web/app/api/explain/route.ts`. The model never receives the user's history, only the public certificate, which the server re-reads from chain. The MVP checks that the attestation report echoes the fresh nonce; full quote verification is v1.
 
 ## Try it
 
 ### Prerequisites
 
-- Node 20, pnpm 9
-- Rust 1.82 with `wasm32-wasip2` target: `rustup target add wasm32-wasip2`
-- `near-cli-rs`: `cargo install near-cli-rs`
+- Node 20, pnpm 8+
+- Rust: the checker pins 1.93.0 (`wasm32-wasip2`), the contract pins 1.95.0; `rust-toolchain.toml` in each crate installs them
+- `near-cli-rs` and `cargo-near`: `cargo install --locked near-cli-rs cargo-near`
+- `wasmtime` for local re-runs: `brew install wasmtime`
 - A free NEAR AI Cloud API key from [cloud.near.ai](https://cloud.near.ai) (or $10 via NEAR Builders)
 
 ### Setup
@@ -109,7 +110,7 @@ Five NEAR components do real work here, named in code.
 git clone https://github.com/<your-org>/nixo
 cd nixo
 pnpm install
-cp .env.example .env   # fill in NEARAI_API_KEY and OUTLAYER_PROJECT_ID
+cp web/.env.example web/.env   # demo account keys; NEARAI_API_KEY is optional
 ```
 
 ### Run the full demo
@@ -120,50 +121,53 @@ pnpm demo               # starts web app at http://localhost:3000
 
 Then:
 
-1. Go to `/`. Pick `alice.testnet` (pre-seeded clean history) → click **Get NIXO** → ✅ Clean certificate in ~15s.
-2. Switch to `mallory.testnet` (pre-seeded with a transfer from a demo-flagged address) → ❌ Rejected, reason `list_hit`, no address revealed.
-3. Go to `/verify`, paste `alice.testnet` → live `is_clean` view call → ✅. Expand the Verified panel.
+1. Go to `/`. Pick `nixo-alice.testnet` (pre-seeded clean history) → click **Prove my funds are clean** → ✅ Clean certificate in about 1–2 minutes.
+2. Switch to `nixo-mallory.testnet` (pre-seeded with a transfer from a demo-flagged address) → ❌ Rejected, reason `list_hit`, no address revealed.
+3. Go to `/verify`, paste `nixo-alice.testnet` → live `is_clean` view call → ✅. Expand the Verified panel.
 
 ### Run the checker alone
 
 ```bash
 cd checker
-cargo build --release --target wasm32-wasip2
+cargo test
+cargo build --release --locked --target wasm32-wasip2
 # Reproduces the published WASM hash; compare with the on-chain pinned hash:
-sha256sum target/wasm32-wasip2/release/nixo_checker.wasm
-near view nixo.testnet get_checker_hash
+shasum -a 256 target/wasm32-wasip2/release/nixo_checker.wasm
+near contract call-function as-read-only nixo.testnet get_checker_hash json-args '{}' network-config testnet now
 ```
 
 ### Re-run the TEE verdict locally
 
 ```bash
-wasmtime run target/wasm32-wasip2/release/nixo_checker.wasm \
-  --input fixtures/alice.json
-# Output hash must match the one in alice's certificate
+printf '{"account":"nixo-alice.testnet"}' | wasmtime run target/wasm32-wasip2/release/nixo_checker.wasm
+# or: scripts/run-checker.sh nixo-alice.testnet
+# input_hash and verdict must match nixo-alice.testnet's on-chain certificate
 ```
 
 ## Repository layout
 
 ```text
 nixo/
-  checker/            # Rust → WASM, runs in OutLayer TDX enclave (the only TCB)
+  checker/                # Rust → WASM, runs in OutLayer TDX enclave (the only TCB)
     src/
-      lib.rs          # pure `verdict()` function, proven with Kani
-      sources/        # intents, sanctions, chain-data adapters
-      shell.rs        # I/O around the pure core
-    proofs/           # Kani proof harnesses
-  contract/           # NEAR smart contract, Rust
+      lib.rs              # pure `verdict()` function, proven with Kani
+      shell.rs            # I/O around the core: parse, normalize, hash, lists, history adapter
+      main.rs             # WASI entry: JSON on stdin, verdict on stdout
+    proofs/verdict.rs     # Kani proof harnesses
+    lists/                # pinned OFAC/EU/UK/UN/SECO snapshot + hacker list (compiled in)
+  contract/               # NEAR smart contract, Rust
     src/
-      lib.rs          # request_nixo, resolve_nixo, is_clean, governance
-      outlayer.rs     # yield/resume + attestation verification
-  relayer/            # Chain Signatures relayer (v1, stubbed in MVP)
-  web/                # Next.js app: / (Get NIXO) and /verify (Exchange)
+      lib.rs              # request_nixo, resolve_nixo, is_clean, governance
+      outlayer.rs         # OutLayer request_execution + result parsing
+      tests.rs            # unit tests: fail-closed, expiry, revocation, timelock
+  web/                    # Next.js app: / (Prove funds) and /verify (Exchange)
     components/VerifiedPanel.tsx
-    lib/
-      explainer.ts    # NEAR AI Cloud call + attestation verification
-      nixo-sdk.ts     # view-only client for is_clean
-  fixtures/           # alice + mallory seed data for the demo
-  .github/workflows/  # build, test, Kani proof, publish WASM hash
+    app/api/request/      # demo signer for the two testnet accounts
+    app/api/explain/      # NEAR AI Cloud explainer (certificate only)
+    lib/nixo-sdk.ts       # dependency-free view client for is_clean
+  fixtures/               # simulated histories for the two demo accounts
+  scripts/                # deploy-testnet.sh, run-checker.sh, update-lists.sh
+  .github/workflows/      # tests, WASM hash, Kani proofs, web build
 ```
 
 ## What is real vs. mocked in the MVP
@@ -171,14 +175,15 @@ nixo/
 | Piece | Status |
 |-------|--------|
 | Checker core (`verdict()` function) | Real, pure Rust, Kani-proven |
-| OutLayer integration (register, call, attestation) | Real, testnet |
-| NEAR verifier contract with hash pinning, timelock, revocation | Real, on `nixo.testnet` |
-| 1Click session + history adapter | Hybrid: real signed session, real 1Click dry-run; history is fetched where endpoints allow, simulated from fixtures otherwise |
-| OFAC sanctions list | Real, pinned snapshot from `safe-fndn/sanctions-address-lists` |
-| Hacker list | Real, small curated set (Lazarus, Bybit, Binance, DMM) + one seeded demo address so `mallory.testnet` reliably fails |
-| Hop tracing | Real on NEAR, Ethereum, Solana testnets; depth 1 in the MVP |
-| NEAR AI Cloud explainer with attestation | Real |
-| Chain Signatures cross-chain relayer | Stub, v1 feature |
+| OutLayer integration (`request_execution`, callback) | Real, testnet |
+| NEAR verifier contract with hash pinning, timelock, revocation, expiry | Real, on `nixo.testnet` |
+| Confidential history | **Simulated**: fixtures compiled into the checker for the two demo accounts; unknown accounts fail closed with `history_unavailable`. 1Click session reads are v1 |
+| Sanctions lists | Real: OFAC, EU, UK, UN and SECO EVM addresses from `safe-fndn/sanctions-address-lists` release `data-2026-10-29` |
+| Hacker list | **Demo only**: one synthetic address so `nixo-mallory.testnet` reliably fails; curated, sourced entries are v1 |
+| Hop tracing | Depth 1 (the account and its direct counterparties) over the fixture history |
+| NEAR AI Cloud explainer | Real call; attestation fetched with a fresh nonce, full quote verification is v1 |
+| Encrypting the session to the enclave key | Not in MVP (no history leaves the enclave because none enters through public input) |
+| Chain Signatures cross-chain relayer | Not built, v2 |
 | Exchange `/verify` page | Real, calls `is_clean` live |
 
 Nothing is hidden: every mocked piece is tagged in the UI and in the README.
@@ -189,7 +194,10 @@ Kani is a bounded model checker for Rust. The core rule of NIXO is tiny and prov
 
 ```rust
 /// The proven core. Pure, no I/O, no allocation beyond its inputs.
-pub fn verdict(traced: &[Addr], banned: &[Addr]) -> Verdict {
+pub fn verdict<A: PartialEq>(traced: &[A], banned: &[A]) -> Verdict {
+    if banned.is_empty() {
+        return Verdict::Rejected(Reason::ListUnavailable);
+    }
     for a in traced {
         if banned.contains(a) {
             return Verdict::Rejected(Reason::ListHit);
@@ -198,18 +206,21 @@ pub fn verdict(traced: &[Addr], banned: &[Addr]) -> Verdict {
     Verdict::Clean
 }
 
-#[cfg(kani)]
+// checker/proofs/verdict.rs (lengths are symbolic too, 0..=8)
 #[kani::proof]
-#[kani::unwind(9)]
+#[kani::unwind(10)]
 fn tainted_is_never_clean() {
-    let traced: [Addr; 8] = kani::any();
-    let banned: [Addr; 8] = kani::any();
+    let tb: [u32; N] = kani::any();
+    let bb: [u32; N] = kani::any();
+    let traced = any_slice(&tb);
+    let banned = any_slice(&bb);
     let i: usize = kani::any();
     let j: usize = kani::any();
-    kani::assume(i < 8 && j < 8);
+    kani::assume(i < traced.len() && j < banned.len());
     kani::assume(traced[i] == banned[j]);
-    assert!(matches!(verdict(&traced, &banned), Verdict::Rejected(_)));
+    assert!(verdict(traced, banned) != Verdict::Clean);
 }
+// + empty_list_is_never_clean, disjoint_is_clean, tainted_is_never_clean_addr ([u8; 32])
 ```
 
 Run the proofs:
@@ -221,9 +232,9 @@ cd checker
 cargo kani                      # VERIFICATION:- SUCCESSFUL
 ```
 
-CI runs Kani on every push and fails the build if any proof regresses. The CI badge in the Verified panel links to the latest green run for the current `checker_hash`.
+CI runs Kani on every push and fails the build if any proof regresses. The Verified panel links to the CI run.
 
-**What this proves:** for all inputs up to the bound (8 traced × 8 banned addresses, raised in CI as time allows), the disjointness rule is implemented correctly.
+**What this proves:** for all inputs up to the bound (up to 8 traced × 8 banned addresses, and 3 × 3 on the production 32-byte address type), the rule is exactly "Clean iff the list is non-empty and disjoint from the traced set".
 
 **What it does not prove:** that the lists are complete, that hop tracing found every counterparty, or that the shell passed the right data. Those are covered by other measures in the table above.
 
@@ -242,14 +253,14 @@ Jurat proves how much you have. NIXO proves where it didn't come from.
 
 ## Business model and roadmap
 
-**Who pays:** exchanges and on-ramps pay per verified certificate, the same budget that buys chain-analysis today. Users get the passport free. Wallets (near.com, Meteor, HOT) earn revenue share for integrating a "Get NIXO before withdrawing" step.
+**Who pays:** exchanges and on-ramps pay per verified certificate, the same budget that buys chain-analysis today. Users get the passport free. Wallets (near.com, Meteor, HOT) earn revenue share for integrating a "Prove funds before withdrawing" step.
 
 **Why it is a business, not a feature:** every private system eventually needs this. NIXO ships first on NEAR because Confidential Intents is the largest private pool in crypto, but the checker is chain-agnostic and the certificate is cross-chain via Chain Signatures.
 
 ### Roadmap
 
-1. **MVP, Nov 2026** (this repo): checker on OutLayer testnet, pinned-hash contract, OFAC + demo hacker list at depth 1, clean vs tainted demo, Kani proofs, Verified panel and explainer.
-2. **v1, Q1 2027:** mainnet contract, multisig governance, real 1Click history adapter, depth 2 with EU + UN lists, TypeScript and Python SDKs, external audit, near.com withdrawal pilot.
+1. **MVP, Nov 2026** (this repo): checker on OutLayer testnet, pinned-hash contract, OFAC/EU/UK/UN/SECO lists + demo hacker list at depth 1, clean vs tainted demo, Kani proofs, Verified panel and explainer.
+2. **v1, Q1 2027:** mainnet contract, multisig governance, real 1Click history adapter inside the enclave, curated hacker list with sources, depth 2, TypeScript and Python SDKs, external audit, near.com withdrawal pilot.
 3. **v2, H2 2027:** Chain Signatures relayer live on Base, Solana and Arbitrum; Zcash viewing-key adapter; auditor view keys and income proofs; a ZK path for the core check; council governance.
 
 ## Hackathon disclosure
@@ -272,8 +283,7 @@ MIT. See [LICENSE](LICENSE).
 ## Links
 
 - Demo video / X post: link here after posting
-- Technical design doc: link to the design doc
-- [OutLayer](https://outlayer.fastnear.com/docs)
+- [OutLayer](https://app.outlayer.ai/docs)
 - [NEAR AI Cloud](https://docs.near.ai/cloud/quickstart)
 - [Confidential Intents](https://docs.near-intents.org/integration/market-makers/confidential-intents)
 - [Kani](https://model-checking.github.io/kani/)

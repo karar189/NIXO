@@ -1,0 +1,6 @@
+# NIXO curated hacker/exploit address list.
+# One address per line. Lines starting with # are comments.
+# Every real entry MUST cite a public source (FBI/OFAC/victim post-mortem) in a comment above it.
+#
+# DEMO ONLY: synthetic testnet account seeded so that nixo-mallory.testnet reliably fails.
+nixo-demo-flagged.testnet

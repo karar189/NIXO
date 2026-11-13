@@ -1,0 +1,14 @@
+{
+  "name": "nixo",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "demo": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "build:checker": "cd checker && cargo build --release --target wasm32-wasip2 && shasum -a 256 target/wasm32-wasip2/release/nixo_checker.wasm",
+    "build:contract": "cd contract && cargo near build non-reproducible-wasm",
+    "test": "cd checker && cargo test && cd ../contract && cargo test",
+    "kani": "cd checker && cargo kani",
+    "checker:run": "scripts/run-checker.sh"
+  }
+}
