@@ -98,7 +98,8 @@ Four NEAR components do real work in the MVP, named in code; Chain Signatures is
 
 ### Prerequisites
 
-- Node 20, pnpm 8+
+- Node 20+, pnpm 8+ (web); npm (backend)
+- Python 3.12+ (agents)
 - Rust: the checker pins 1.93.0 (`wasm32-wasip2`), the contract pins 1.95.0; `rust-toolchain.toml` in each crate installs them
 - `near-cli-rs` and `cargo-near`: `cargo install --locked near-cli-rs cargo-near`
 - `wasmtime` for local re-runs: `brew install wasmtime`
@@ -109,9 +110,27 @@ Four NEAR components do real work in the MVP, named in code; Chain Signatures is
 ```bash
 git clone https://github.com/<your-org>/nixo
 cd nixo
-pnpm install
-cp web/.env.example web/.env   # demo account keys; NEARAI_API_KEY is optional
+cp .env.example .env    # one file for every service; demo keys, NEARAI_API_KEY optional
+pnpm setup              # pnpm install (web), npm ci (backend), Python venv + deps (agents)
 ```
+
+### Running locally
+
+One command starts everything, with the root `.env` exported into each service:
+
+```bash
+pnpm dev                # web :3000, agents :8000 (AGENTS_PORT), backend :4000 (BACKEND_PORT)
+```
+
+Or one service at a time:
+
+| Service | Command | URL |
+|---|---|---|
+| web (NIXO pages + `/trade`) | `pnpm dev:web` | http://localhost:3000 |
+| agents (FastAPI) | `pnpm dev:agents` | http://localhost:8000/docs |
+| backend (NestJS waitlist) | `pnpm dev:backend` | http://localhost:4000 |
+
+Tests: `pnpm test` (checker, contract, agents), `pnpm test:backend`, `pnpm kani`.
 
 ### Run the full demo
 
@@ -160,14 +179,20 @@ nixo/
       lib.rs              # request_nixo, resolve_nixo, is_clean, governance
       outlayer.rs         # OutLayer request_execution + result parsing
       tests.rs            # unit tests: fail-closed, expiry, revocation, timelock
-  web/                    # Next.js app: / (Prove funds) and /verify (Exchange)
+  web/                    # one Next.js app
+    app/(nixo)/           # / (Prove funds) and /verify (Exchange)
+    app/trade/            # trading app from NearArc: /trade, /trade/agent, /trade/settings, /trade/about
     components/VerifiedPanel.tsx
     app/api/request/      # demo signer for the two testnet accounts
     app/api/explain/      # NEAR AI Cloud explainer (certificate only)
     lib/nixo-sdk.ts       # dependency-free view client for is_clean
+  agents/                 # FastAPI trading agents (from NearArc): analysis, planner, paper trading, 1Click
+  backend/                # NestJS waitlist (from NearArc), isolated, npm
+  marketplace/            # Swarma plan docs, parked (no code yet)
+  docs/neararc/           # NearArc's original README and notes
   fixtures/               # simulated histories for the two demo accounts
-  scripts/                # deploy-testnet.sh, run-checker.sh, update-lists.sh
-  .github/workflows/      # tests, WASM hash, Kani proofs, web build
+  scripts/                # dev.sh, deploy-testnet.sh, run-checker.sh, update-lists.sh, nearai_smoke.py
+  .github/workflows/      # checker, Kani, contract, web, agents, backend
 ```
 
 ## What is real vs. mocked in the MVP

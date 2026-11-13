@@ -26,3 +26,13 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff.lint]
+# CI gate: correctness only (syntax errors + pyflakes: undefined names, unused
+# imports, etc.). Ruff's wider default style rules currently report 8 findings
+# in the imported NearArc code (import order, dict() literal, one SIM114, three
+# intentional multi-line string concatenations); those are left for a separate
+# cleanup so this merge doesn't touch trading logic.
+select = ["E9", "F"]
+

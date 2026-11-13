@@ -1,11 +1,14 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # The repo-root .env is shared by all services; a local agents/.env overrides it.
+    model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
 
     app_name: str = "neararc-agents"
-    port: int = 8000
+    # AGENTS_PORT (was PORT): renamed so it doesn't clash with the backend in the shared .env.
+    port: int = Field(8000, validation_alias="AGENTS_PORT")
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:4000"]
 
     # Market data. The public data mirror is reachable where api.binance.com is not.
