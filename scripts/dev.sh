@@ -5,7 +5,19 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [[ -f .env ]]; then set -a; source .env; set +a; else echo "note: no .env at repo root (see .env.example)"; fi
+# Export the root .env literally. It is a dotenv file, not shell: values are
+# never evaluated (no expansion, globbing or redirects), and one pair of
+# surrounding quotes is stripped.
+if [[ -f .env ]]; then
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
+    key="${BASH_REMATCH[1]}" val="${BASH_REMATCH[2]}"
+    if [[ "$val" =~ ^\"(.*)\"$ || "$val" =~ ^\'(.*)\'$ ]]; then val="${BASH_REMATCH[1]}"; fi
+    export "$key=$val"
+  done < .env
+else
+  echo "note: no .env at repo root (see .env.example)"
+fi
 [[ -x agents/.venv/bin/uvicorn ]] || { echo "agents venv missing: run 'pnpm setup'"; exit 1; }
 [[ -d backend/node_modules ]] || { echo "backend deps missing: run 'pnpm setup'"; exit 1; }
 
