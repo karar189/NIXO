@@ -1,4 +1,6 @@
-const AGENTS_URL = process.env.NEXT_PUBLIC_AGENTS_URL ?? "http://localhost:8000";
+// Same-origin proxy (app/api/agents/[...path]); the agents' address is the
+// server-side AGENTS_API_URL setting, never baked into the browser bundle.
+const AGENTS_URL = "/api/agents";
 
 export type Side = "LONG" | "SHORT";
 export type RiskProfile = "conservative" | "moderate" | "aggressive";
@@ -233,7 +235,7 @@ async function call<T>(path: string, init: RequestInit & { account?: string } = 
   try {
     res = await fetch(`${AGENTS_URL}${path}`, { ...init, headers: { ...headers, ...(init.headers as object) } });
   } catch {
-    throw new ApiError("Can't reach the agents service. Is it running on " + AGENTS_URL + "?", 0);
+    throw new ApiError("Can't reach the web server's agents proxy.", 0);
   }
   const body = await res.json().catch(() => null);
   if (!res.ok) {
