@@ -107,7 +107,7 @@ export function ViewingKeysPanel({ runId }: { runId: string | null }) {
           Connect wallet
         </button>
       ) : !runId ? (
-        <p className="text-sm text-muted">Start an off-chain experiment run first (used as the log scope id).</p>
+        <p className="text-sm text-muted">Start an off-chain agents run first (used as the log scope id).</p>
       ) : (
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs text-muted">

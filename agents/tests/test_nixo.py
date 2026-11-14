@@ -1,4 +1,4 @@
-"""NIXO v0.1 vault rules (Nixo_agents.md §7), cross-chain rules, and full rules-mode experiment runs."""
+"""NIXO v0.1 vault rules (Nixo_agents.md §7), cross-chain rules, and full rules-mode agent runs."""
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -10,7 +10,7 @@ import pytest
 from app.nixo.adapter import ExecutionAdapter, MarketSnapshot
 from app.nixo.assets import ALLOCATION_CODE, FALLBACK
 from app.nixo.audit import AuditLog
-from app.nixo.experiment import ExperimentConfig, ExperimentRun
+from app.nixo.run import RunConfig, NixoRun
 from app.nixo.vault import UNIT, Policy, ProvenanceRegistry, TradeRequest, Vault, VaultError
 
 OWNER = "owner.testnet"
@@ -214,12 +214,12 @@ def test_recipient_must_be_pinned(env):
 
 def test_config_validation():
     with pytest.raises(ValueError):
-        ExperimentConfig(recipients={"sol": "not a solana address!"})
+        RunConfig(recipients={"sol": "not a solana address!"})
     with pytest.raises(ValueError):
-        ExperimentConfig(allocation_usdc=D(100), task_targets=[{"asset": "NEAR@near", "usdc": 200}])
+        RunConfig(allocation_usdc=D(100), task_targets=[{"asset": "NEAR@near", "usdc": 200}])
     with pytest.raises(ValueError):
-        ExperimentConfig(task_targets=[{"asset": USDC, "usdc": 10}])
-    cfg = ExperimentConfig(recipients={"ETH": "0x" + "ab" * 20, "btc": ""})
+        RunConfig(task_targets=[{"asset": USDC, "usdc": 10}])
+    cfg = RunConfig(recipients={"ETH": "0x" + "ab" * 20, "btc": ""})
     assert cfg.recipients == {"eth": "0x" + "ab" * 20}
     assert {"NEAR@near", "ETH@eth", "SOL@sol", USDC} <= set(cfg.allowed_assets)
 
@@ -227,16 +227,16 @@ def test_config_validation():
 # ---------------------------------------------------------------- full runs
 
 
-def _run(**cfg) -> ExperimentRun:
+def _run(**cfg) -> NixoRun:
     async def go():
-        run = ExperimentRun(OWNER, ExperimentConfig(market="synthetic", llm_provider="rules", **cfg))
+        run = NixoRun(OWNER, RunConfig(market="synthetic", llm_provider="rules", **cfg))
         await run.run()
         return run
 
     return asyncio.run(go())
 
 
-def test_full_experiment_rules_mode():
+def test_full_run_rules_mode():
     run = _run(steps=8)
     rep = run.report()
     assert rep["status"] == "done", rep["error"]

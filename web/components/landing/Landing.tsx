@@ -12,6 +12,7 @@ import { ConnectButton } from "@/components/wallet/ConnectButton";
 import { NIXO_CONTRACT } from "@/lib/config";
 import HalftoneBloom from "@/components/originkit/ui/halftone-bloom";
 import DitherField from "./DitherField";
+import DitherFlower from "./DitherFlower";
 import { EncryptionBeam } from "./EncryptionBeam";
 import { FeatureBento } from "./FeatureBento";
 import { Preloader } from "./Preloader";
@@ -210,6 +211,13 @@ export function Landing() {
             <HalftoneBloom background="#000000" color1="#1a2a6c" color2="#5b6cff" speed={35} size={170} angle={160} dotSize={7} hover={180} reach={480} style={{ minWidth: 0, minHeight: 0 }} />
           </div>
 
+          {/* Dithered flower in the empty right half (desktop only). */}
+          <DitherFlower
+            active={introDone}
+            className="pointer-events-none absolute inset-y-0 right-0 hidden w-[min(46vw,640px)] lg:block"
+            style={{ maskImage: "linear-gradient(to bottom, black 62%, transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, black 62%, transparent 100%)" }}
+          />
+
           <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 pt-24 pb-12 sm:px-6 sm:pt-28 lg:pb-16">
             <div className="max-w-3xl">
               <p data-hero-kicker className="kicker flex items-center gap-3 text-muted">
@@ -224,7 +232,7 @@ export function Landing() {
 
               <div data-hero-copy className="mt-7 sm:mt-8">
                 <p className="max-w-md text-[15px] leading-relaxed text-muted sm:text-base">
-                  AI agents read the market, plan a strategy and trade it through NEAR Intents. Your funds are proven clean inside a secure enclave — never your history.
+                  AI agents read the market, plan a strategy and trade it through NEAR Intents. Your funds are proven clean inside a secure enclave, never your history.
                 </p>
 
                 <div className="mt-8 flex flex-wrap items-center gap-3 sm:mt-9">
@@ -232,7 +240,7 @@ export function Landing() {
                     <ConnectButton variant="primary" showError />
                   </Magnetic>
                   <Magnetic strength={0.18}>
-                    <Link href="/verify" className="btn-secondary">
+                    <Link href="/verify" className="btn-secondary bg-black/50 backdrop-blur-sm">
                       Check any wallet <ArrowUpRight className="size-3.5" />
                     </Link>
                   </Magnetic>

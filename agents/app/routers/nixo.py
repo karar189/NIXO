@@ -1,6 +1,6 @@
-"""NIXO v0.1 two-agent experiment API (Nixo_agents.md).
+"""NIXO v0.1 two-agent run API (Nixo_agents.md).
 
-The caller's NEAR account (X-Near-Account) is the owner of the experiment's
+The caller's NEAR account (X-Near-Account) is the owner of the run's
 deposits and the only account that can revoke its assignments.
 
 Also exposes on-chain vault status helpers and the delayed viewing-key path.
@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.nixo import assets, onchain, viewing_keys
-from app.nixo.experiment import CODE_PATTERN, LABELS, ExperimentConfig, store
+from app.nixo.run import CODE_PATTERN, LABELS, RunConfig, store
 from app.nixo.vault import VaultError
 from app.nixo.viewing_keys import KeyType
 from app.routers.trading import account_id
@@ -34,7 +34,7 @@ class AttemptBody(BaseModel):
 def _run(owner: str, run_id: str):
     run = store.get(owner, run_id)
     if run is None:
-        raise HTTPException(404, "No such experiment run for this account")
+        raise HTTPException(404, "No such run for this account")
     return run
 
 
@@ -53,7 +53,7 @@ async def list_assets() -> dict:
 def defaults() -> dict:
     labels = {**LABELS, **onchain.enforcement_label()}
     return {
-        "config": ExperimentConfig().model_dump(mode="json"),
+        "config": RunConfig().model_dump(mode="json"),
         "labels": labels,
         "vault_contract": settings.nixo_vault_contract,
         "nixo_contract": settings.nixo_contract,
@@ -185,7 +185,7 @@ def viewing_keypair() -> dict:
 
 
 @router.post("/runs")
-async def start_run(cfg: ExperimentConfig, x_near_account: str | None = Header(None)) -> dict:
+async def start_run(cfg: RunConfig, x_near_account: str | None = Header(None)) -> dict:
     owner = account_id(x_near_account)
     try:
         run = store.start(owner, cfg)

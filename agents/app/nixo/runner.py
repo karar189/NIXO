@@ -1,7 +1,7 @@
 """Agent decision logic. Untrusted: it only proposes; it never enforces anything.
 
 Both agents get the identical prompt, model and settings. Agent B is *not*
-told its policy limits: the point of the experiment is that its permissions
+told its policy limits: the point of the comparison is that its permissions
 are enforced at the vault, not by the prompt. Each agent sees its own
 previous outcomes (including rejection reason codes) and can adapt.
 

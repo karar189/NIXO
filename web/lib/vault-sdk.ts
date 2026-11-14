@@ -1,5 +1,6 @@
-/** View-only client + wallet call builders for nixo-vault.testnet (Layer 2). */
-import { NEAR_RPC, NIXO_VAULT_CONTRACT } from "./config";
+/** View-only client + wallet call builders for the Layer 2 vault (testnet + mainnet). */
+import { nixoVaultContract } from "./config";
+import { rpcUrl, type NearNetwork } from "@/lib/near/config";
 import type { TxRequest } from "@/components/wallet/WalletProvider";
 
 export type VaultDeposit = {
@@ -35,9 +36,10 @@ export type VaultConfig = {
   next_assignment_id: string;
 };
 
-async function view<T>(method: string, args: object = {}, contract = NIXO_VAULT_CONTRACT): Promise<T> {
-  if (!contract) throw new Error("NEXT_PUBLIC_NIXO_VAULT_CONTRACT is not set");
-  const res = await fetch(NEAR_RPC, {
+async function view<T>(network: NearNetwork, method: string, args: object = {}): Promise<T> {
+  const contract = nixoVaultContract(network);
+  if (!contract) throw new Error(`Vault contract is not set for ${network}`);
+  const res = await fetch(rpcUrl(network), {
     method: "POST",
     headers: { "content-type": "application/json" },
     cache: "no-store",
@@ -62,13 +64,13 @@ async function view<T>(method: string, args: object = {}, contract = NIXO_VAULT_
   return JSON.parse(new TextDecoder().decode(bytes)) as T;
 }
 
-export const getVaultConfig = () => view<VaultConfig>("get_config");
-export const getDeposit = (deposit_id: string | number) =>
-  view<VaultDeposit | null>("get_deposit", { deposit_id: String(deposit_id) });
-export const getAssignment = (assignment_id: string | number) =>
-  view<VaultAssignment | null>("get_assignment", { assignment_id: String(assignment_id) });
-export const listDepositsByOwner = (owner: string) =>
-  view<VaultDeposit[]>("list_deposits_by_owner", { owner });
+export const getVaultConfig = (network: NearNetwork) => view<VaultConfig>(network, "get_config");
+export const getDeposit = (network: NearNetwork, deposit_id: string | number) =>
+  view<VaultDeposit | null>(network, "get_deposit", { deposit_id: String(deposit_id) });
+export const getAssignment = (network: NearNetwork, assignment_id: string | number) =>
+  view<VaultAssignment | null>(network, "get_assignment", { assignment_id: String(assignment_id) });
+export const listDepositsByOwner = (network: NearNetwork, owner: string) =>
+  view<VaultDeposit[]>(network, "list_deposits_by_owner", { owner });
 
 export function nearToYocto(amountNear: string): string {
   const [whole = "0", frac = ""] = amountNear.split(".");
@@ -76,27 +78,39 @@ export function nearToYocto(amountNear: string): string {
   return (BigInt(whole || "0") * 10n ** 24n + BigInt(frac24 || "0")).toString();
 }
 
-function tx(methodName: string, args: Record<string, unknown>, gasT: bigint, deposit: string): TxRequest {
+function tx(
+  network: NearNetwork,
+  methodName: string,
+  args: Record<string, unknown>,
+  gasT: bigint,
+  deposit: string,
+): TxRequest {
+  const receiverId = nixoVaultContract(network);
+  if (!receiverId) throw new Error(`Vault contract is not set for ${network}`);
   return {
-    receiverId: NIXO_VAULT_CONTRACT,
+    receiverId,
     actions: [{ methodName, args, gas: (gasT * 10n ** 12n).toString(), deposit }],
   };
 }
 
-export function buildDepositCall(amountNear: string): TxRequest {
-  return tx("deposit", {}, 80n, nearToYocto(amountNear));
+export function buildDepositCall(network: NearNetwork, amountNear: string): TxRequest {
+  return tx(network, "deposit", {}, 80n, nearToYocto(amountNear));
 }
 
-export function buildAssignCall(args: {
-  deposit_id: string | number;
-  agent_id: string;
-  max_per_tx_near: string;
-  max_per_window_near: string;
-  window_ns: string | number;
-  expires_at_ns: string | number;
-  allowlist: string[];
-}): TxRequest {
+export function buildAssignCall(
+  network: NearNetwork,
+  args: {
+    deposit_id: string | number;
+    agent_id: string;
+    max_per_tx_near: string;
+    max_per_window_near: string;
+    window_ns: string | number;
+    expires_at_ns: string | number;
+    allowlist: string[];
+  },
+): TxRequest {
   return tx(
+    network,
     "assign",
     {
       deposit_id: String(args.deposit_id),
@@ -112,13 +126,17 @@ export function buildAssignCall(args: {
   );
 }
 
-export function buildExecuteCall(args: {
-  assignment_id: string | number;
-  amount_near: string;
-  target: string;
-  dry_run?: boolean;
-}): TxRequest {
+export function buildExecuteCall(
+  network: NearNetwork,
+  args: {
+    assignment_id: string | number;
+    amount_near: string;
+    target: string;
+    dry_run?: boolean;
+  },
+): TxRequest {
   return tx(
+    network,
     "execute",
     {
       assignment_id: String(args.assignment_id),
@@ -131,10 +149,14 @@ export function buildExecuteCall(args: {
   );
 }
 
-export function buildRevokeCall(assignment_id: string | number): TxRequest {
-  return tx("revoke", { assignment_id: String(assignment_id) }, 20n, "0");
+export function buildRevokeCall(network: NearNetwork, assignment_id: string | number): TxRequest {
+  return tx(network, "revoke", { assignment_id: String(assignment_id) }, 20n, "0");
 }
 
-export function buildWithdrawCall(deposit_id: string | number, amountNear: string): TxRequest {
-  return tx("withdraw", { deposit_id: String(deposit_id), amount: nearToYocto(amountNear) }, 30n, "0");
+export function buildWithdrawCall(
+  network: NearNetwork,
+  deposit_id: string | number,
+  amountNear: string,
+): TxRequest {
+  return tx(network, "withdraw", { deposit_id: String(deposit_id), amount: nearToYocto(amountNear) }, 30n, "0");
 }

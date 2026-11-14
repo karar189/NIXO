@@ -1,6 +1,6 @@
 # agents
 
-Python FastAPI service for NIXO trading agents and the Layer 2 vault experiment.
+Python FastAPI service for NIXO trading agents and the Layer 2 vault.
 Product framing: root [`NIXO_PRD.md`](../NIXO_PRD.md) and [`docs/`](../docs/).
 
 ```bash
@@ -25,7 +25,7 @@ and falls through on failure; naming a provider tries it first, optionally with
 - `GET /llm/models/{provider}`: chat models from the provider's catalog
 - `POST /llm/ping {"provider": "deepseek"}`: live health check
 
-## NIXO v0.1 experiment (`app/nixo`)
+## NIXO v0.1 agents (`app/nixo`)
 
 **Spec:** [`docs/Nixo_agents.md`](../docs/Nixo_agents.md) (defers to the PRD on
 product language). **UI:** `/dashboard/agents`.

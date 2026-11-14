@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, ShieldCheck } from "lucide-react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { getCertificate, nsToDate, type CertificateView } from "@/lib/nixo-sdk";
-import { NIXO_CONTRACT } from "@/lib/config";
+import { nixoContract } from "@/lib/config";
 import { Card } from "./Card";
 
 type State = { status: "loading" } | { status: "error"; message: string } | { status: "done"; view: CertificateView | null };
@@ -13,19 +13,20 @@ type State = { status: "loading" } | { status: "error"; message: string } | { st
 /** The connected account's NIXO certificate, read live from the contract. */
 export function CleanFundsCard() {
   const { accountId, network } = useWallet();
+  const contract = nixoContract(network);
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
-    if (!accountId || network !== "testnet") return;
+    if (!accountId) return;
     let live = true;
-    getCertificate(accountId)
+    setState({ status: "loading" });
+    getCertificate(accountId, network)
       .then((view) => live && setState({ status: "done", view }))
       .catch((e) => live && setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
     return () => {
       live = false;
     };
   }, [accountId, network]);
-
   const cert = state.status === "done" ? state.view : null;
   const clean = !!cert?.valid && cert.certificate.verdict === "clean";
   const inconclusive =
@@ -56,10 +57,8 @@ export function CleanFundsCard() {
     <Card title="Clean funds" action={<ShieldCheck className="size-4 text-accent" strokeWidth={1.6} />} className="relative overflow-hidden">
       <div className="hatch pointer-events-none absolute inset-0 opacity-40" aria-hidden="true" />
       <div className="relative">
-        {network !== "testnet" ? (
-          <p className="text-sm text-muted">Certificates live on NEAR testnet ({NIXO_CONTRACT}). Switch the network in Settings to see yours.</p>
-        ) : state.status === "loading" ? (
-          <p className="text-sm text-muted">Reading {NIXO_CONTRACT}…</p>
+        {state.status === "loading" ? (
+          <p className="text-sm text-muted">Reading {contract}…</p>
         ) : state.status === "error" ? (
           <p className="text-sm text-danger">{state.message}</p>
         ) : (

@@ -6,7 +6,7 @@
 
 ## Current status (checked now)
 
-**Verdict:** Layer 1 live NearBlocks path is **coded, uploaded, and locally proven** (checker `0.3.0`); on-chain pin `3ebe1fb8…ed59` is proposed/applied after the height-parse fix. **TEE re-issue is still blocked** by OutLayer `Execution promise failed` (same for fixture `0.2.0` and live `0.3.0`). Offline Alice/Mallory demos still pass in wasmtime. Layer 2 includes **on-chain vault** + delayed viewing keys + off-chain experiment. Layer 3 **mock solver + fail-closed SDK shipped** (not a live Intents network).
+**Verdict:** Layer 1 live NearBlocks path is **coded, uploaded, and locally proven** (checker `0.3.0`); on-chain pin `3ebe1fb8…ed59` is proposed/applied after the height-parse fix. **TEE re-issue is still blocked** by OutLayer `Execution promise failed` (same for fixture `0.2.0` and live `0.3.0`). Offline Alice/Mallory demos still pass in wasmtime. Layer 2 includes **on-chain vault** + delayed viewing keys + off-chain agents. Layer 3 **mock solver + fail-closed SDK shipped** (not a live Intents network).
 
 ### Why Layer 1 was “partial” (and what changed)
 
@@ -19,7 +19,7 @@
 | PRD layer | Status | What’s real | What’s not |
 |---|---|---|---|
 | **1 — Fund tracer** | **Live coded + pinned; TEE certs blocked** | Checker `0.3.0` live NearBlocks; offline Alice clean / Mallory `taint_path` depth 6; secrets + project `nixo.testnet/nixo-checker`; contract certifies live sources | OutLayer workers fail every run tested tonight (0.2.0 + 0.3.0). Stored certs still `0.1.0`. NearBlocks free-tier rate limits under live BFS |
-| **2 — Vault + AI agent** | **On-chain vault + off-chain experiment** | `vault/` → `nixo-vault.testnet`; `/dashboard/agents`; **Privacy:** `/private-ai` + `/api/private-ai` (NEAR AI Cloud TEE note, fresh-nonce checks, ephemeral, `fixtures/samples/`) | Live Intents fill (dry-run default); other viewing-key types; set `NEARAI_API_KEY` for live Private AI completions |
+| **2 — Vault + AI agent** | **On-chain vault + off-chain agents** | `vault/` → `nixo-vault.testnet`; `/dashboard/agents`; **Privacy:** `/private-ai` + `/api/private-ai` (NEAR AI Cloud TEE note, fresh-nonce checks, ephemeral, `fixtures/samples/`) | Live Intents fill (dry-run default); other viewing-key types; set `NEARAI_API_KEY` for live Private AI completions |
 | **3 — Solver infrastructure** | **Mock + fail-closed SDK shipped** | `checkIntent` gate, mock solver Alice fill / Mallory refuse, `/dashboard/solver`, `pnpm demo:solver` / `pnpm test:solver` | Real Intents solver network, published package, destination/batch |
 
 **Live contract snapshot (14 Nov 2026, late evening):**
@@ -54,10 +54,10 @@ Three layers that feed each other:
 
 ### What else is in the repo
 
-The web app is a **desk**: certificate next to trading and the agent experiment.
+The web app is a **desk**: certificate next to trading and the agent desk.
 
 - **Clean funds / verify** — wallet or demo `request_nixo`, certificate poll, Verified panel, “Check any wallet” mainnet preview (not certifiable).
-- **NIXO agents experiment** (`/dashboard/agents`, `agents/app/nixo/`) — two agents, same task, equivalent capital; Agent B through an off-chain vault; 14+ adversarial tests; audit trail. Spec: `docs/Nixo_agents.md`.
+- **NIXO agents** (`/dashboard/agents`, `agents/app/nixo/`) — two agents, same task, equivalent capital; Agent B through an off-chain vault; 14+ adversarial tests; audit trail. Spec: `docs/Nixo_agents.md`.
 - **Trading desk** (`/dashboard/trade`) — paper trades with real 1Click dry quotes; live NEAR/USDC spot via Intents; FastAPI agents with multi-provider LLM (Anthropic, OpenAI, DeepSeek, NVIDIA NIM, NEAR AI).
 - **NestJS waitlist** — landing form only.
 
@@ -75,7 +75,7 @@ The web app is a **desk**: certificate next to trading and the agent experiment.
 | **History** | NearBlocks v3 (host-side) + fixtures (enclave) | Live enclave fetch is PRD work, not shipped. |
 | **Web** | Next.js App Router, React, Tailwind, GSAP | Landing, dashboard, verify, agents UI. |
 | **Wallets** | `@near-wallet-selector` | Meteor, HERE, Intear, MyNearWallet, Nightly, Sender. |
-| **Agents / vault (v0.1)** | Python 3.12, FastAPI | Off-chain vault + experiment; port-ready reason codes. |
+| **Agents / vault (v0.1)** | Python 3.12, FastAPI | Off-chain vault + agent runs; port-ready reason codes. |
 | **LLM** | `agents/app/llm.py` | Anthropic + OpenAI-compatible (incl. NEAR AI Cloud). |
 | **Backend** | NestJS | Waitlist only. |
 | **Monorepo** | pnpm (web), npm (backend), Python venv (agents) | `pnpm dev` → web :3000, agents :8000, backend :4000. |
@@ -101,7 +101,7 @@ Exchanges are the paying customer long-term; users get the passport. Hackathon j
 2. Tracer path is real on testnet: OutLayer, pinned hash, live Alice/Mallory certificates.
 3. Minimal TCB + Kani on verdict/trace; fail-closed contract and checker design.
 4. Real sanctions snapshot + documented mainnet hack trail for preview/demo.
-5. Agents experiment ships: vault rules, revoke, adversarial suite, UI with stub labels.
+5. Agents desk ships: vault rules, revoke, adversarial suite, UI with stub labels.
 6. LLM stack includes NEAR AI Cloud (not Anthropic-only).
 7. Landing/UI polish landed; desk narrative now includes Agents & vaults as a real page.
 
@@ -122,7 +122,7 @@ Exchanges are the paying customer long-term; users get the passport. Hackathon j
 
 ### Overall
 
-Against the **hackathon PRD**, roughly: **Layer 1 ~65–70%** (pipeline real; pin/certs may lag), **Layer 2 ~85%** (on-chain vault + delayed viewing key + off-chain experiment; deploy vault for live demos), **Layer 3 ~90%** (mock solver + fail-closed SDK; not a live network). Combined product narrative is stronger than a tracer-only build, but judges must see stubs labelled.
+Against the **hackathon PRD**, roughly: **Layer 1 ~65–70%** (pipeline real; pin/certs may lag), **Layer 2 ~85%** (on-chain vault + delayed viewing key + off-chain agents; deploy vault for live demos), **Layer 3 ~90%** (mock solver + fail-closed SDK; not a live network). Combined product narrative is stronger than a tracer-only build, but judges must see stubs labelled.
 
 ### Component checklist
 
@@ -138,7 +138,7 @@ Against the **hackathon PRD**, roughly: **Layer 1 ~65–70%** (pipeline real; pi
 | `/verify`, clean-funds, Verified panel | ✅ | Web app |
 | Mainnet “Check any wallet” preview | ✅ preview only | Not certifiable |
 | On-chain vault + `is_clean` deposit gate | ✅ | `vault/` (`nixo-vault.testnet`); native NEAR |
-| Off-chain vault + two-agent experiment | ✅ labelled stub provenance | `agents/app/nixo/`, `/dashboard/agents` |
+| Off-chain vault + two-agent run | ✅ labelled stub provenance | `agents/app/nixo/`, `/dashboard/agents` |
 | Contract-enforced agent `execute` / FC key | ✅ | `execute` + `scripts/vault-fc-key.sh`; dry-run default |
 | Encrypted trade log + ≥1 viewing key | ✅ delayed | `agents/app/nixo/viewing_keys.py`; other types stubbed |
 | TEE-hosted strategy + Verified nonce panel | ⚠️ partial | Explainer/attestation path exists; agent strategy not default-enclave |

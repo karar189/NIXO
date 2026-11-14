@@ -1,6 +1,7 @@
 // View-only NIXO client. No dependencies: one JSON-RPC call per method.
 // Exchanges only need `isClean(account)`.
-import { NEAR_RPC, NIXO_CONTRACT } from "./config";
+import { NIXO_CONTRACT, nixoContract } from "./config";
+import { rpcUrl, type NearNetwork } from "@/lib/near/config";
 
 export type Certificate = {
   account: string;
@@ -26,8 +27,13 @@ export type Config = {
   cert_ttl_ns: string;
 };
 
-async function view<T>(method: string, args: object = {}, opts: { rpc?: string; contract?: string } = {}): Promise<T> {
-  const res = await fetch(opts.rpc ?? NEAR_RPC, {
+async function view<T>(
+  method: string,
+  args: object = {},
+  opts: { rpc?: string; contract?: string; network?: NearNetwork } = {},
+): Promise<T> {
+  const network = opts.network ?? "testnet";
+  const res = await fetch(opts.rpc ?? rpcUrl(network), {
     method: "POST",
     headers: { "content-type": "application/json" },
     cache: "no-store",
@@ -38,7 +44,7 @@ async function view<T>(method: string, args: object = {}, opts: { rpc?: string; 
       params: {
         request_type: "call_function",
         finality: "final",
-        account_id: opts.contract ?? NIXO_CONTRACT,
+        account_id: opts.contract ?? (opts.network ? nixoContract(opts.network) : NIXO_CONTRACT),
         method_name: method,
         args_base64: btoa(JSON.stringify(args)),
       },
@@ -52,9 +58,12 @@ async function view<T>(method: string, args: object = {}, opts: { rpc?: string; 
   return JSON.parse(new TextDecoder().decode(bytes)) as T;
 }
 
-export const isClean = (account: string) => view<boolean>("is_clean", { account });
-export const getCertificate = (account: string) => view<CertificateView | null>("get_certificate", { account });
-export const getConfig = () => view<Config>("get_config");
-export const isRevoked = (checker_hash: string) => view<boolean>("is_revoked", { checker_hash });
+export const isClean = (account: string, network: NearNetwork = "testnet") =>
+  view<boolean>("is_clean", { account }, { network });
+export const getCertificate = (account: string, network: NearNetwork = "testnet") =>
+  view<CertificateView | null>("get_certificate", { account }, { network });
+export const getConfig = (network: NearNetwork = "testnet") => view<Config>("get_config", {}, { network });
+export const isRevoked = (checker_hash: string, network: NearNetwork = "testnet") =>
+  view<boolean>("is_revoked", { checker_hash }, { network });
 
 export const nsToDate = (ns: string) => new Date(Number(BigInt(ns) / 1_000_000n));

@@ -5,10 +5,10 @@ import Link from "next/link";
 import {
   DEMO_ACCOUNTS,
   EXPLORER,
-  NIXO_CONTRACT,
   NIXO_REQUEST_DEPOSIT_NEAR,
   NIXO_REQUEST_DEPOSIT_YOCTO,
   NIXO_REQUEST_GAS,
+  nixoContract,
   type DemoId,
 } from "@/lib/config";
 import { getCertificate, nsToDate, type CertificateView } from "@/lib/nixo-sdk";
@@ -66,11 +66,15 @@ type PrivateAiResult = {
   error?: string;
 };
 
-async function waitForCertificate(account: string, sinceMs: number): Promise<CertificateView> {
+async function waitForCertificate(
+  account: string,
+  sinceMs: number,
+  network: "testnet" | "mainnet",
+): Promise<CertificateView> {
   const started = Date.now();
   while (Date.now() - started < TIMEOUT_MS) {
     await new Promise((r) => setTimeout(r, POLL_MS));
-    const v = await getCertificate(account).catch(() => null);
+    const v = await getCertificate(account, network).catch(() => null);
     if (v && nsToDate(v.certificate.issued_at_ns).getTime() >= sinceMs) return v;
   }
   throw new Error("Timed out waiting for the TEE result. Check the transaction for a nixo_failed event.");
@@ -85,6 +89,7 @@ function txHashFromOutcomes(outcomes: unknown[]): string | null {
 
 export default function PrivacyPage() {
   const { accountId, network, ready, connect, signAndSend } = useWallet();
+  const certContract = nixoContract(network);
 
   const [who, setWho] = useState<DemoId>("alice");
   const [phase, setPhase] = useState<Phase>("idle");
@@ -113,7 +118,7 @@ export default function PrivacyPage() {
     const since = requestedAtMs - 30_000;
     const tick = setInterval(() => setElapsed(Math.round((Date.now() - requestedAtMs) / 1000)), 500);
     try {
-      const v = await waitForCertificate(account, since);
+      const v = await waitForCertificate(account, since, network);
       setView(v);
       setPhase("done");
       fetch("/api/explain", { method: "POST", body: JSON.stringify({ account }) })
@@ -147,17 +152,12 @@ export default function PrivacyPage() {
       await connect();
       return;
     }
-    if (network !== "testnet") {
-      setPhase("error");
-      setError("Switch to testnet in Settings — NIXO certificates are on testnet.");
-      return;
-    }
 
     const requestedAtMs = Date.now();
     try {
       const outcomes = await signAndSend([
         {
-          receiverId: NIXO_CONTRACT,
+          receiverId: certContract,
           actions: [
             {
               methodName: "request_nixo",
@@ -299,7 +299,7 @@ export default function PrivacyPage() {
               <Tag tone="accent">live · signs on-chain</Tag>
             </div>
             <p className="mt-1 text-sm text-muted">
-              This opens your NEAR wallet to sign <span className="font-mono">request_nixo</span> on {NIXO_CONTRACT} (~
+              This opens your NEAR wallet to sign <span className="font-mono">request_nixo</span> on {certContract} (~
               {NIXO_REQUEST_DEPOSIT_NEAR} NEAR deposit for the TEE run).
             </p>
             {accountId ? (
@@ -500,7 +500,7 @@ export default function PrivacyPage() {
           </p>
         </header>
 
-        <Card title="Paper intent" tag="1 NEAR → USDC" description="Origin account · no settlement, no 1Click. The gate reads is_clean live from nixo.testnet.">
+        <Card title="Paper intent" tag="1 NEAR → USDC" description={`Origin account · no settlement, no 1Click. The gate reads is_clean live from ${certContract}.`}>
 
           <div className="flex flex-wrap gap-2">
             {DEMO_ACCOUNTS.map((a) => (

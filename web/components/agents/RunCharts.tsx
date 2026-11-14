@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { AuditEvent, RunReport } from "@/lib/nixo/experiment";
+import type { AuditEvent, RunReport } from "@/lib/nixo/run";
 import {
   assetLabel, flowRequests, fmt, mirroredAttacks, priceOf, reasonCounts, stepSeries, symbolOf, type AgentStepPoint, type StepPoint,
 } from "@/lib/nixo/viz";

@@ -1,5 +1,5 @@
 // Derives chart data from a run report + its audit trail. Pure functions, no React.
-import type { AgentId, AuditEvent, RunReport } from "@/lib/nixo/experiment";
+import type { AgentId, AuditEvent, RunReport } from "@/lib/nixo/run";
 
 // ---------------------------------------------------------------- vault gates
 

@@ -1,4 +1,4 @@
-"""Token catalogue for the experiment, from NEAR Intents 1Click (GET /v0/tokens).
+"""Token catalogue for agent runs, from NEAR Intents 1Click (GET /v0/tokens).
 
 Assets are addressed by a readable code, `SYMBOL@chain` (e.g. `BTC@btc`, `USDC@base`),
 that maps 1:1 to a 1Click `assetId`. The chain comes from the catalogue, never from
@@ -16,7 +16,7 @@ from app.trading.markets import USDC_NEAR
 
 log = logging.getLogger(__name__)
 
-ALLOCATION_CODE = "USDC@near"  # the experiment's numeraire: allocations and spend are in USDC on NEAR
+ALLOCATION_CODE = "USDC@near"  # numeraire: allocations and spend are in USDC on NEAR
 CACHE_SECONDS = 600
 
 # Readable symbols for wrapped tokens, and which symbols have Binance USDT history.
@@ -118,7 +118,7 @@ def build(tokens: list[dict]) -> Catalogue:
             continue
         used.add(code)
         assets.append(Asset(code, aid, symbol, chain, decimals, price))
-    if ALLOCATION_CODE not in used:  # the experiment can't run without its numeraire
+    if ALLOCATION_CODE not in used:  # can't run without the USDC@near numeraire
         assets.insert(0, FALLBACK[0])
     return Catalogue(assets, "1click")
 

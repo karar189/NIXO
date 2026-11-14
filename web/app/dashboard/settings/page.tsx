@@ -7,7 +7,7 @@ import { NetworkSwitch } from "@/components/wallet/NetworkToggle";
 import { Card } from "@/components/dashboard/Card";
 import { KV, PageHeader, Tag } from "@/components/dashboard/ui";
 import { usePlannerInfo } from "@/components/llm/ModelPicker";
-import { NIXO_CONTRACT, NIXO_VAULT_CONTRACT } from "@/lib/config";
+import { nixoContract, nixoVaultContract } from "@/lib/config";
 import { accountExplorerUrl, rpcUrl } from "@/lib/near/config";
 import { ProvidersPanel } from "@/components/llm/ModelPicker";
 import type { NearNetwork } from "@/lib/near/config";
@@ -64,8 +64,8 @@ export default function SettingsPage() {
 
         <Card title="Services" icon={<Server />} tag={plannerError ? "agents offline" : planner ? "agents online" : "checking…"}>
           <dl className="divide-y divide-line/60">
-            <KV k="NIXO contract" v={NIXO_CONTRACT} />
-            <KV k="Vault contract" v={NIXO_VAULT_CONTRACT || "not set"} />
+            <KV k="NIXO contract" v={nixoContract(network)} />
+            <KV k="Vault contract" v={nixoVaultContract(network) || "not set"} />
             <KV
               k="Agents service"
               mono={false}
@@ -146,7 +146,7 @@ export default function SettingsPage() {
 
       <Card title="AI model providers" tag="agents service">
         <p className="mb-3 text-sm leading-6 text-muted">
-          The trading planner, position supervisor and NIXO experiment agents can use any configured provider.
+          The trading planner, position supervisor and NIXO agents can use any configured provider.
           &ldquo;Auto&rdquo; tries them in this order and skips one for 10 minutes after an auth or credit failure.
         </p>
         <ProvidersPanel />

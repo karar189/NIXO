@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
-import { nixoApi, type AssetCode, type AssetInfo, type Catalogue } from "@/lib/nixo/experiment";
+import { nixoApi, type AssetCode, type AssetInfo, type Catalogue } from "@/lib/nixo/run";
 
 // One fetch per page load; the agents service caches the 1Click list for 10 minutes.
 let cached: Promise<Catalogue> | null = null;

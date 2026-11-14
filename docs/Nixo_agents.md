@@ -2,13 +2,13 @@
 
 ## MVP v0.1: Verified Capital & Agent Authorization
 
-**Status:** Implemented as an **off-chain** experiment (`agents/app/nixo/`, UI
+**Status:** Implemented as an **off-chain** agents path (`agents/app/nixo/`, UI
 `/dashboard/agents`). Provenance is a labelled stub; enforcement is not yet a
 NEAR contract.\
-**Product home:** this experiment is **Layer 2** of the agreed product in
+**Product home:** this agents path is **Layer 2** of the agreed product in
 [`NIXO_PRD.md`](../NIXO_PRD.md). On product language, privacy claims, and
 hackathon cut order, the PRD wins.\
-**Scope:** Two-agent controlled experiment\
+**Scope:** Two-agent controlled comparison\
 **Primary objective:** Demonstrate that an AI agent can complete a
 useful financial task while operating under enforceable capital
 permissions.
@@ -19,7 +19,7 @@ permissions.
 
 NIXO's full product is a clean-funds passport plus a gated trading layer
 (tracer → vault → solver). This document specifies only the **Layer 2
-experiment**: capital assigned to an AI agent with a provenance record and
+agents path**: capital assigned to an AI agent with a provenance record and
 permissions enforced at the transaction boundary — today in-process, target
 on-chain and gated by `nixo.testnet.is_clean` per the PRD.
 
@@ -33,9 +33,9 @@ The first MVP should prove one narrow claim:
 > agent, using equivalent starting capital and the same execution
 > environment, while respecting enforceable financial limits.
 
-The MVP is an experiment, not yet a production financial infrastructure
+The MVP is a controlled comparison, not yet a production financial infrastructure
 network. Viewing keys, encrypted trade logs, and the mock solver are PRD
-items outside this experiment's code path unless explicitly added later.
+items outside this agents code path unless explicitly added later.
 
 ### What we are building
 
@@ -50,7 +50,7 @@ items outside this experiment's code path unless explicitly added later.
 -   Adversarial tests that attempt to bypass the constrained agent's
     permissions.
 
-### Explicitly out of scope *for this experiment doc*
+### Explicitly out of scope *for this agents doc*
 
 (These may still be in scope for the overall product — see the PRD.)
 
@@ -85,13 +85,13 @@ with:
 NIXO's role is to connect those properties to agent execution, after Layer 1
 has produced a clean-funds certificate the vault can trust.
 
-The experiment tests whether constrained agents are useful in practice. The
+This comparison tests whether constrained agents are useful in practice. The
 broader protocol (live enclave history, on-chain vault gate, viewing keys,
 mock solver) is specified in the PRD, not here.
 
 ------------------------------------------------------------------------
 
-## 3. Experiment Design
+## 3. Comparison Design
 
 ### 3.1 The two-agent comparison
 
@@ -127,7 +127,7 @@ conditions and task. If they run sequentially, use a recorded or
 controlled market snapshot where possible. If they run live, record
 timestamps and acknowledge that market conditions may differ.
 
-### 3.2 What the experiment should demonstrate
+### 3.2 What the comparison should demonstrate
 
 The constrained agent should:
 
@@ -137,7 +137,7 @@ The constrained agent should:
 -   Be blocked when it attempts a prohibited action.
 -   Stop being able to transact after revocation.
 
-The experiment should also deliberately attempt policy violations. A
+The comparison should also deliberately attempt policy violations. A
 blocked attempt is evidence that the enforcement boundary works; it is
 not a successful violation.
 
@@ -195,7 +195,7 @@ Profitability is not the primary success metric.
                     Execution results
 
        Provenance records and audit events are stored
-       for both agents and the experiment.
+       for both agents and the run.
 ```
 
 The diagram describes the MVP boundary. The execution adapter can be
@@ -303,7 +303,7 @@ Rules:
 }
 ```
 
-For the experiment, create separate deposit/allocation records for each
+For the run, create separate deposit/allocation records for each
 agent, with equivalent amounts and conditions.
 
 ### 5.3 Permission policy
@@ -704,7 +704,7 @@ reproducible.
 -   Revoke Agent B and demonstrate rejection of a later request.
 -   Explain what is real, simulated and stubbed.
 
-**Exit condition:** A reviewer can understand the experiment and verify
+**Exit condition:** A reviewer can understand the comparison and verify
 its important claims without relying on narration.
 
 ------------------------------------------------------------------------
@@ -758,7 +758,7 @@ audit trail records what happened."
 
 ## 14. What Comes After v0.1
 
-Only after the two-agent experiment works should NIXO expand.
+Only after the two-agent comparison works should NIXO expand.
 
 Potential next steps:
 

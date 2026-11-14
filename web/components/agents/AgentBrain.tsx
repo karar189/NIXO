@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
-import type { AuditEvent, RunReport } from "@/lib/nixo/experiment";
+import type { AuditEvent, RunReport } from "@/lib/nixo/run";
 import { GATES, flowRequests, gateFunnel, type FlowRequest } from "@/lib/nixo/viz";
 import { PROVIDER_SHORT } from "@/lib/trading/api";
 

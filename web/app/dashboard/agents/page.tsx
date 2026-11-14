@@ -26,7 +26,7 @@ import { RunCharts } from "@/components/agents/RunCharts";
 import { AssetPicker, chainOf, symbolOf, useCatalogue } from "@/components/agents/AssetPicker";
 import { OnchainVaultPanel } from "@/components/agents/OnchainVaultPanel";
 import { ViewingKeysPanel } from "@/components/agents/ViewingKeysPanel";
-import { NIXO_VAULT_CONTRACT } from "@/lib/config";
+import { nixoVaultContract } from "@/lib/config";
 import {
   ALLOCATION_CODE,
   nixoApi,
@@ -34,14 +34,14 @@ import {
   type AgentStep,
   type AuditEvent,
   type Catalogue,
-  type ExperimentConfig,
+  type RunConfig,
   type RunReport,
   type RunSummary,
   type StepOutcome,
-} from "@/lib/nixo/experiment";
+} from "@/lib/nixo/run";
 import { PROVIDER_SHORT } from "@/lib/trading/api";
 
-const DEFAULTS: ExperimentConfig = {
+const DEFAULTS: RunConfig = {
   allocation_usdc: "1000",
   task_targets: [
     { asset: "NEAR@near", usdc: "300" },
@@ -147,8 +147,8 @@ function SetupCard({
   disabled,
   account,
 }: {
-  cfg: ExperimentConfig;
-  setCfg: (c: ExperimentConfig) => void;
+  cfg: RunConfig;
+  setCfg: (c: RunConfig) => void;
   onRun: () => void;
   busy: boolean;
   disabled: boolean;
@@ -156,7 +156,7 @@ function SetupCard({
 }) {
   const { info } = usePlannerInfo();
   const { cat, error: catError } = useCatalogue(account);
-  const up = (patch: Partial<ExperimentConfig>) => setCfg({ ...cfg, ...patch });
+  const up = (patch: Partial<RunConfig>) => setCfg({ ...cfg, ...patch });
   const dec = (v: string) => v.replace(/[^\d.]/g, "");
 
   const total = cfg.task_targets.reduce((s, t) => s + (Number(t.usdc) || 0), 0);
@@ -167,7 +167,7 @@ function SetupCard({
   const pinnable = cfg.allowed_chains.filter((c) => c !== "near");
 
   // A task asset is always allowed, and so is its chain.
-  const withAsset = (c: ExperimentConfig, code: string): ExperimentConfig => ({
+  const withAsset = (c: RunConfig, code: string): RunConfig => ({
     ...c,
     allowed_assets: c.allowed_assets.includes(code) ? c.allowed_assets : [...c.allowed_assets, code],
     allowed_chains: c.allowed_chains.includes(chainOf(code)) ? c.allowed_chains : [...c.allowed_chains, chainOf(code)],
@@ -193,7 +193,7 @@ function SetupCard({
   const nAttacks = 14 + 3;
 
   return (
-    <Card title="Experiment setup">
+    <Card title="Run setup">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Field label="Allocation per agent (USDC)" htmlFor="x-alloc" hint="Two equivalent, separate deposits.">
           <input id="x-alloc" inputMode="decimal" className={`${inputCls} font-mono`} value={cfg.allocation_usdc} onChange={(e) => up({ allocation_usdc: dec(e.target.value) })} />
@@ -202,7 +202,7 @@ function SetupCard({
           <input id="x-steps" type="number" min={1} max={20} className={`${inputCls} font-mono`} value={cfg.steps} onChange={(e) => up({ steps: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} />
         </Field>
         <Field label="Market" htmlFor="x-market" hint="Frozen at run start; both agents see the same prices.">
-          <select id="x-market" className={inputCls} value={cfg.market} onChange={(e) => up({ market: e.target.value as ExperimentConfig["market"] })}>
+          <select id="x-market" className={inputCls} value={cfg.market} onChange={(e) => up({ market: e.target.value as RunConfig["market"] })}>
             <option value="recorded">Recorded prices + live 1Click routes</option>
             <option value="synthetic">Synthetic (offline, deterministic)</option>
           </select>
@@ -316,7 +316,7 @@ function SetupCard({
         <button type="button" onClick={onRun} disabled={busy || disabled || over}
           className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-2.5 text-sm font-medium text-accent-ink disabled:opacity-50 md:mb-7">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-          {busy ? "Running…" : "Run experiment"}
+          {busy ? "Running…" : "Run agents"}
         </button>
       </div>
     </Card>
@@ -787,9 +787,10 @@ function Honesty({ labels }: { labels: RunReport["labels"] }) {
 // ---------------------------------------------------------------- page
 
 export default function AgentsPage() {
-  const { accountId } = useWallet();
+  const { accountId, network } = useWallet();
   const account = accountId ?? "";
-  const [cfg, setCfg] = useState<ExperimentConfig>(DEFAULTS);
+  const vaultContract = nixoVaultContract(network);
+  const [cfg, setCfg] = useState<RunConfig>(DEFAULTS);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [runId, setRunId] = useState<string | null>(null);
   const [report, setReport] = useState<RunReport | null>(null);
@@ -912,8 +913,12 @@ export default function AgentsPage() {
         }
         actions={
           <>
-            <Tag tone="mock">off-chain experiment</Tag>
-            {NIXO_VAULT_CONTRACT ? <Tag tone="clean">on-chain vault · {NIXO_VAULT_CONTRACT}</Tag> : <Tag tone="warn">vault contract unset</Tag>}
+            <Tag tone="mock">off-chain agents</Tag>
+            {vaultContract ? (
+              <Tag tone="clean">on-chain vault · {vaultContract}</Tag>
+            ) : (
+              <Tag tone="warn">vault contract unset</Tag>
+            )}
             <Tag tone="accent">delayed viewing key</Tag>
           </>
         }
@@ -942,8 +947,8 @@ export default function AgentsPage() {
       {!report && !runs.length && (
         <EmptyState
           icon={<Bot />}
-          title="No experiment runs yet"
-          body="Configure the experiment above and press Run. A full run with an LLM takes about a minute; the rule-based agent is faster."
+          title="No runs yet"
+          body="Configure the run above and press Run. A full run with an LLM takes about a minute; the rule-based agent is faster."
         />
       )}
 

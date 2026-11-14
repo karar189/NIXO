@@ -1,7 +1,31 @@
-export const NIXO_CONTRACT = process.env.NEXT_PUBLIC_NIXO_CONTRACT ?? "nixo.testnet";
-/** Layer 2 vault. Empty string disables on-chain vault UI actions. */
-export const NIXO_VAULT_CONTRACT =
-  process.env.NEXT_PUBLIC_NIXO_VAULT_CONTRACT ?? "nixo-vault.testnet";
+import type { NearNetwork } from "@/lib/near/config";
+
+/** Per-network certificate contracts. Wallet network picks which one txs hit. */
+export const NIXO_CONTRACTS = {
+  testnet:
+    process.env.NEXT_PUBLIC_NIXO_CONTRACT_TESTNET ??
+    process.env.NEXT_PUBLIC_NIXO_CONTRACT ??
+    "nixo.testnet",
+  mainnet:
+    process.env.NEXT_PUBLIC_NIXO_CONTRACT_MAINNET ?? "nixo.nixowallet.near",
+} as const;
+
+/** Per-network Layer 2 vaults. Empty string disables vault UI for that network. */
+export const NIXO_VAULT_CONTRACTS = {
+  testnet:
+    process.env.NEXT_PUBLIC_NIXO_VAULT_CONTRACT_TESTNET ??
+    process.env.NEXT_PUBLIC_NIXO_VAULT_CONTRACT ??
+    "nixo-vault.testnet",
+  mainnet:
+    process.env.NEXT_PUBLIC_NIXO_VAULT_CONTRACT_MAINNET ?? "vault.nixowallet.near",
+} as const;
+
+export const nixoContract = (network: NearNetwork) => NIXO_CONTRACTS[network];
+export const nixoVaultContract = (network: NearNetwork) => NIXO_VAULT_CONTRACTS[network];
+
+/** Defaults (testnet) for static pages / older imports without a wallet network. */
+export const NIXO_CONTRACT = NIXO_CONTRACTS.testnet;
+export const NIXO_VAULT_CONTRACT = NIXO_VAULT_CONTRACTS.testnet;
 export const NEAR_RPC = process.env.NEXT_PUBLIC_NEAR_RPC ?? "https://test.rpc.fastnear.com";
 export const EXPLORER = process.env.NEXT_PUBLIC_EXPLORER ?? "https://testnet.nearblocks.io";
 export const OUTLAYER_APP = process.env.NEXT_PUBLIC_OUTLAYER_APP ?? "https://app.outlayer.ai";

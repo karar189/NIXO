@@ -1,4 +1,4 @@
-"""Two-agent experiment runner (Nixo_agents.md §3, §7-§9, §12).
+"""Two-agent run orchestrator (Nixo_agents.md §3, §7-§9, §12).
 
 Phases:
   setup        two equivalent deposits, each with its own provenance record;
@@ -82,7 +82,7 @@ def _default_targets() -> list[TargetLeg]:
             TargetLeg(asset="SOL@sol", usdc=Decimal(100))]
 
 
-class ExperimentConfig(BaseModel):
+class RunConfig(BaseModel):
     allocation_usdc: Decimal = Field(Decimal(1000), gt=0, le=1_000_000, decimal_places=6)
     task_targets: list[TargetLeg] = Field(default_factory=_default_targets, min_length=1, max_length=4)
     steps: int = Field(8, ge=1, le=20)
@@ -149,7 +149,7 @@ class ExperimentConfig(BaseModel):
         return out
 
     @model_validator(mode="after")
-    def _check(self) -> "ExperimentConfig":
+    def _check(self) -> "RunConfig":
         codes = [t.asset for t in self.task_targets]
         if len(set(codes)) != len(codes):
             raise ValueError("each task asset can appear only once")
@@ -180,8 +180,8 @@ def _now() -> float:
     return time.time()
 
 
-class ExperimentRun:
-    def __init__(self, owner: str, cfg: ExperimentConfig):
+class NixoRun:
+    def __init__(self, owner: str, cfg: RunConfig):
         self.owner = owner
         self.cfg = cfg
         self.run_id = f"run_{uuid.uuid4().hex[:10]}"
@@ -748,7 +748,7 @@ class ExperimentRun:
             self.phase = "done"
             self.status = "done"
         except Exception as err:  # surface, don't crash the service
-            log.exception("experiment %s failed", self.run_id)
+            log.exception("run %s failed", self.run_id)
             self.status, self.error = "error", f"{type(err).__name__}: {err}"
         finally:
             self.finished_at = _now()
@@ -938,24 +938,24 @@ class ExperimentRun:
         }
 
 
-class ExperimentStore:
+class RunStore:
     MAX_PER_OWNER = 20
 
     def __init__(self) -> None:
-        self.runs: dict[str, ExperimentRun] = {}
+        self.runs: dict[str, NixoRun] = {}
 
-    def start(self, owner: str, cfg: ExperimentConfig) -> ExperimentRun:
+    def start(self, owner: str, cfg: RunConfig) -> NixoRun:
         mine = [r for r in self.runs.values() if r.owner == owner]
         if any(r.status in ("pending", "running") for r in mine):
-            raise VaultError("RUN_IN_PROGRESS", "an experiment is already running for this account")
+            raise VaultError("RUN_IN_PROGRESS", "a run is already in progress for this account")
         for old in sorted(mine, key=lambda r: r.started_at)[: max(0, len(mine) - self.MAX_PER_OWNER + 1)]:
             self.runs.pop(old.run_id, None)
-        run = ExperimentRun(owner, cfg)
+        run = NixoRun(owner, cfg)
         self.runs[run.run_id] = run
         run.task = asyncio.create_task(run.run())
         return run
 
-    def get(self, owner: str, run_id: str) -> ExperimentRun | None:
+    def get(self, owner: str, run_id: str) -> NixoRun | None:
         run = self.runs.get(run_id)
         return run if run and run.owner == owner else None
 
@@ -963,4 +963,4 @@ class ExperimentStore:
         return [r.summary() for r in sorted(self.runs.values(), key=lambda r: -r.started_at) if r.owner == owner]
 
 
-store = ExperimentStore()
+store = RunStore()

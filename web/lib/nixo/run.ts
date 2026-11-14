@@ -1,4 +1,4 @@
-// Client for the NIXO v0.1 two-agent experiment (agents service, /nixo/*).
+// Client for the NIXO v0.1 two-agent run API (agents service, /nixo/*).
 // Amounts are decimal strings: the service uses exact decimals, not floats.
 import { ApiError, type LlmChoice } from "@/lib/trading/api";
 
@@ -29,7 +29,7 @@ export type Catalogue = {
 
 export type TargetLeg = { asset: AssetCode; usdc: string };
 
-export type ExperimentConfig = {
+export type RunConfig = {
   allocation_usdc: string;
   task_targets: TargetLeg[];
   steps: number;
@@ -225,7 +225,7 @@ export type ManualAttempt = {
 export type RunReport = RunSummary & {
   owner: string;
   error: string | null;
-  config: ExperimentConfig;
+  config: RunConfig;
   labels: Record<"execution" | "provenance" | "enforcement", string>;
   task: string;
   task_targets: TargetLeg[];
@@ -305,8 +305,8 @@ async function call<T>(path: string, account: string, init: RequestInit = {}): P
 
 export const nixoApi = {
   assets: (account: string) => call<Catalogue>("/assets", account),
-  defaults: (account: string) => call<{ config: ExperimentConfig; labels: Record<string, string> }>("/defaults", account),
-  start: (account: string, cfg: ExperimentConfig) =>
+  defaults: (account: string) => call<{ config: RunConfig; labels: Record<string, string> }>("/defaults", account),
+  start: (account: string, cfg: RunConfig) =>
     call<RunReport>("/runs", account, { method: "POST", body: JSON.stringify(cfg) }),
   list: (account: string) => call<{ runs: RunSummary[] }>("/runs", account),
   get: (account: string, runId: string) => call<RunReport>(`/runs/${runId}`, account),

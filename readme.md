@@ -14,8 +14,12 @@ Built for **NEAR HACKATHON** (window through 14 Nov 2026). Primary track **Priva
 |---|---|
 | **Product requirements** | [`NIXO_PRD.md`](NIXO_PRD.md) (authoritative for scope and privacy language) |
 | **Status / narrative** | [`docs/PRODUCT_SUMMARY.md`](docs/PRODUCT_SUMMARY.md) |
-| **Agents experiment spec** | [`docs/Nixo_agents.md`](docs/Nixo_agents.md) |
-| **Verifier contract** | `nixo.testnet` |
+| **Agents spec** | [`docs/Nixo_agents.md`](docs/Nixo_agents.md) |
+| **Verifier (testnet)** | `nixo.testnet` |
+| **Vault (testnet)** | `nixo-vault.testnet` |
+| **Verifier (mainnet)** | `nixo.nixowallet.near` |
+| **Vault (mainnet)** | `vault.nixowallet.near` |
+| **Owner (mainnet)** | `nixowallet.near` · OutLayer `outlayer.near` |
 | **Checker** | `/checker`, hash pinned on-chain |
 | **Kani proofs** | `/checker/proofs/verdict.rs` (CI) |
 | **License** | MIT |
@@ -39,11 +43,29 @@ Opens `http://localhost:3000`:
 1. **Certify Alice.** **Prove my funds are clean** as `nixo-alice.testnet` → pending → ✅ Clean certificate (verdict, expiry, checker version, history source — **no hop path**).
 2. **Reject Mallory.** Switch to `nixo-mallory.testnet` (replay of a real mainnet trail from `farstreet4572.near`) → ❌ Rejected with a reason. Live certificates today use fixture history; see [What is real vs mocked](#what-is-real-vs-mocked-in-this-version).
 3. **Exchange view.** Open `/verify`, paste `nixo-alice.testnet` → live `is_clean` → ✅. Expand the Verified panel (WASM hash, OutLayer attestation, list snapshot, Kani link).
-4. **Agents & vaults (Layer 2).** `/dashboard/agents` — on-chain vault panel (`nixo-vault.testnet`: deposit gated by `is_clean`, assign / execute dry-run / revoke / withdraw), delayed viewing-key path for the encrypted trade log, plus the off-chain two-agent adversarial experiment.
+4. **Agents & vaults (Layer 2).** `/dashboard/agents` — on-chain vault panel (`nixo-vault.testnet`: deposit gated by `is_clean`, assign / execute dry-run / revoke / withdraw), delayed viewing-key path for the encrypted trade log, plus the off-chain two-agent adversarial suite.
 5. **Mock solver (Layer 3).** `/dashboard/solver` — paper fill: Alice allowed, Mallory refused via fail-closed `checkIntent`. Or `pnpm demo:solver` / `pnpm test:solver`. Not a live Intents network.
 6. **Optional preview.** On `/verify`, **Check any NEAR wallet** traces mainnet accounts (e.g. `farstreet4572.near`) with hop paths — preview only, not certifiable.
 
 **Deploy note:** run `scripts/deploy-vault-testnet.sh` before pitching on-chain deposits as live on testnet.
+
+### Mainnet contracts (live)
+
+| Role | Account | Notes |
+|---|---|---|
+| Certificate / `is_clean` | [`nixo.nixowallet.near`](https://nearblocks.io/address/nixo.nixowallet.near) | Owner `nixowallet.near`; OutLayer `outlayer.near`; checker hash `3ebe1fb8…ed59` |
+| Authorization vault | [`vault.nixowallet.near`](https://nearblocks.io/address/vault.nixowallet.near) | `nixo_contract` → `nixo.nixowallet.near`; native NEAR deposit gate + agent `execute` |
+
+Point the app at mainnet:
+
+```bash
+NEXT_PUBLIC_NIXO_CONTRACT=nixo.nixowallet.near
+NEXT_PUBLIC_NIXO_VAULT_CONTRACT=vault.nixowallet.near
+NIXO_CONTRACT=nixo.nixowallet.near
+NIXO_VAULT_CONTRACT=vault.nixowallet.near
+```
+
+Deploy txs: [certificate](https://explorer.near.org/transactions/2VLYuZ4Cb9ss6TZqxJrToRVt1JMZf46n24AVZ14Xi4SR) · [vault](https://explorer.near.org/transactions/5AH4XPwV1jw5wHQWZAyyF4nWesd4E9oQTpHr2N8vmrRb). Gated deposits still need a mainnet Clean certificate (`request_nixo` via OutLayer) before `is_clean` is true.
 
 ---
 
@@ -96,10 +118,10 @@ The vault holds funds; the agent never does. Target behaviour (PRD):
 6. Encrypted trade log + at least one viewing-key path (a delayed key is enough for this version). Viewing keys do **not** hide explorer-visible transfers.
 
 **Shipped today:**
-- On-chain vault crate [`vault/`](vault/) → `nixo-vault.testnet` (native NEAR): `deposit` → `is_clean` gate, provenance, `assign` / `execute` / `revoke` / `withdraw`, trade-hash commits. Unit tests cover clean accept, dirty refund, caps, injection, revoke, rollback.
+- On-chain vault crate [`vault/`](vault/) → `nixo-vault.testnet` (testnet) and `vault.nixowallet.near` (mainnet): `deposit` → `is_clean` gate, provenance, `assign` / `execute` / `revoke` / `withdraw`, trade-hash commits. Unit tests cover clean accept, dirty refund, caps, injection, revoke, rollback.
 - `/dashboard/agents` on-chain panel + FC-key helper [`scripts/vault-fc-key.sh`](scripts/vault-fc-key.sh).
 - Delayed viewing-key encrypt/redeem path in the agents service (live / time-limited / auditor typed but not shipped).
-- Off-chain two-agent adversarial experiment (stub provenance) still available for the comparison suite.
+- Off-chain two-agent adversarial suite (stub provenance) still available for the comparison run.
 
 ### Layer 3 — Solver infrastructure
 
@@ -174,7 +196,7 @@ pnpm dev                # web :3000, agents :8000, backend :4000
 | Service | Command | URL |
 |---|---|---|
 | Web (landing, dashboard, verify) | `pnpm dev:web` | http://localhost:3000 |
-| Agents (FastAPI + NIXO experiment) | `pnpm dev:agents` | http://localhost:8000/docs |
+| Agents (FastAPI + NIXO) | `pnpm dev:agents` | http://localhost:8000/docs |
 | Backend (waitlist) | `pnpm dev:backend` | http://localhost:4000 |
 
 Tests: `pnpm test`, `pnpm test:backend`, `pnpm kani`.
@@ -203,7 +225,7 @@ printf '{"account":"nixo-alice.testnet"}' | wasmtime run target/wasm32-wasip2/re
 
 ---
 
-## Agents & vaults (Layer 2 experiment)
+## Agents & vaults (Layer 2)
 
 Specified in [`docs/Nixo_agents.md`](docs/Nixo_agents.md); product target in [`NIXO_PRD.md`](NIXO_PRD.md) §4.2.
 
@@ -227,12 +249,12 @@ nixo/
   docs/
     README.md             # doc index
     PRODUCT_SUMMARY.md    # narrative + current status
-    Nixo_agents.md        # Layer 2 experiment spec
+    Nixo_agents.md        # Layer 2 agents spec
   checker/                # Rust → WASM (OutLayer TDX)
   contract/               # nixo.testnet certificate contract
   vault/                  # nixo-vault.testnet Layer 2 deposit vault
   web/                    # Next.js: landing, /verify, /dashboard/*
-  agents/                 # FastAPI: trading + app/nixo experiment + viewing keys
+  agents/                 # FastAPI: trading + app/nixo agents + viewing keys
   backend/                # NestJS waitlist
   fixtures/               # Alice / Mallory + mainnet cache + samples/ (Private AI)
   scripts/                # nearai_smoke, run-checker, deploy, …
@@ -247,14 +269,15 @@ nixo/
 |-------|--------|
 | Checker core + multi-hop search (source) | Real; Kani-proven on bounded harnesses |
 | OutLayer + `nixo.testnet` certificates | Real on testnet |
+| Mainnet certificate + vault | Live: `nixo.nixowallet.near` + `vault.nixowallet.near` (owner `nixowallet.near`). Cert issuance still depends on OutLayer mainnet workers |
 | Certified histories | **Live by default** inside the enclave: NearBlocks v3 (`history_source: nearblocks-v3:<net>@h=<height>`). **Fixtures** only when `NIXO_OFFLINE=1` (local/CI). Mallory fixture remains a labelled mainnet-trail replay for offline demos. Set `NEARBLOCKS_API_KEY` as an OutLayer author secret for production certify |
 | Pinned WASM vs certificates | On-chain pin is checker `0.2.0` / depth 6 / Mallory `taint_path` (hash `574b8182…`). Local wasmtime matches. Re-issued on-chain certificates may lag if OutLayer TEE runs fail — check `get_certificate` vs `get_checker_hash` |
 | Sanctions lists | Real snapshot `data-2026-10-29` |
 | Hacker list | One entry; unofficial public attribution (AMLBot / Shridlock); say so in demos |
 | `/verify` “Check any wallet” | Preview only (`caller_supplied`); different WASI build hash |
 | NEAR AI explainer / Private AI | Real: `/private-ai` + `POST /api/private-ai` (TEE model, fresh-nonce attestation checks, **no server retention**). Sample docs in `fixtures/samples/`. Full DCAP/NRAS: `scripts/nearai_smoke.py` |
-| Agents off-chain experiment | Off-chain / stub provenance / simulated (labelled) |
-| On-chain vault gated by `is_clean` | Shipped in `vault/` (`nixo-vault.testnet`); deploy for live testnet |
+| Agents off-chain path | Off-chain / stub provenance / simulated (labelled) |
+| On-chain vault gated by `is_clean` | Live on testnet (`nixo-vault.testnet`) and mainnet (`vault.nixowallet.near`) |
 | Viewing keys / encrypted trade log | Delayed key path in agents service; other types stubbed |
 | Mock solver + fail-closed SDK | Shipped (paper fill; not a live Intents network) — `/dashboard/solver`, `pnpm demo:solver`, `pnpm test:solver` |
 | Chain Signatures cross-chain relayer | Not built (later) |
@@ -300,7 +323,7 @@ Full wording: [`NIXO_PRD.md`](NIXO_PRD.md) §§6–7.
 | This version | Later |
 |---|---|
 | Live enclave NearBlocks fetch (fixtures labelled for offline/CI) | More indexers |
-| Certificates on `nixo.testnet`; vault + mock solver use `is_clean` | Mainnet; real solver network |
+| Certificates on `nixo.testnet` + mainnet `nixo.nixowallet.near`; vault + mock solver use `is_clean` | Real solver network; dedicated `nixo.near` if acquired |
 | Vault with per-deposit provenance, FC-key agent, revoke/withdraw | Destination / amount-level provenance |
 | Agent via Intents within limits; dry-run default | Full production swap state machine |
 | TEE strategy if reliable; else say so | Default private strategy |

@@ -22,7 +22,7 @@ def enforcement_label() -> dict[str, str]:
     if settings.nixo_vault_contract:
         return {
             "execution": "On-chain mode available: agent calls nixo-vault.execute (dry_run default). "
-                         "Off-chain experiment still runs for the adversarial suite.",
+                         "Off-chain agents path still runs for the adversarial suite.",
             "provenance": "On-chain provenance rows require a Clean certificate via nixo.is_clean at deposit.",
             "enforcement": f"Contract-level: {settings.nixo_vault_contract} enforces caps, allowlist, revoke.",
         }

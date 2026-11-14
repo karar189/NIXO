@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, ShieldCheck, Vault } from "lucide-react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { Card } from "@/components/dashboard/Card";
-import { NIXO_CONTRACT, NIXO_VAULT_CONTRACT } from "@/lib/config";
+import { nixoContract, nixoVaultContract } from "@/lib/config";
 import {
   buildAssignCall,
   buildDepositCall,
@@ -31,6 +31,8 @@ function yoctoToNear(y: string): string {
 
 export function OnchainVaultPanel() {
   const { accountId, ready, connect, signAndSend, network } = useWallet();
+  const vault = nixoVaultContract(network);
+  const certContract = nixoContract(network);
   const [deposits, setDeposits] = useState<VaultDeposit[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,15 +45,15 @@ export function OnchainVaultPanel() {
   const [selected, setSelected] = useState<string>("");
 
   const refresh = useCallback(async () => {
-    if (!accountId || !NIXO_VAULT_CONTRACT) return;
+    if (!accountId || !vault) return;
     try {
-      const rows = await listDepositsByOwner(accountId);
+      const rows = await listDepositsByOwner(network, accountId);
       setDeposits(rows);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [accountId]);
+  }, [accountId, network, vault]);
 
   useEffect(() => {
     void refresh();
@@ -74,10 +76,12 @@ export function OnchainVaultPanel() {
     }
   }
 
-  if (!NIXO_VAULT_CONTRACT) {
+  if (!vault) {
     return (
       <Card title="On-chain vault">
-        <p className="text-sm text-muted">Set NEXT_PUBLIC_NIXO_VAULT_CONTRACT to enable Layer 2 deposit / assign / execute.</p>
+        <p className="text-sm text-muted">
+          No vault contract configured for {network}. Set NEXT_PUBLIC_NIXO_VAULT_CONTRACT_MAINNET / _TESTNET.
+        </p>
       </Card>
     );
   }
@@ -93,7 +97,9 @@ export function OnchainVaultPanel() {
   if (!accountId) {
     return (
       <Card title="On-chain vault">
-        <p className="mb-3 text-sm text-muted">Connect a testnet wallet that holds a Clean certificate on {NIXO_CONTRACT}.</p>
+        <p className="mb-3 text-sm text-muted">
+          Connect a {network} wallet that holds a Clean certificate on {certContract}.
+        </p>
         <button type="button" onClick={() => void connect()} className="rounded-lg bg-accent px-3 py-2 text-sm text-background">
           Connect wallet
         </button>
@@ -108,19 +114,16 @@ export function OnchainVaultPanel() {
       title="On-chain vault"
       action={
         <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-muted">
-          <Vault className="size-3.5" /> {NIXO_VAULT_CONTRACT}
+          <Vault className="size-3.5" /> {vault}
         </span>
       }
     >
       <p className="mb-3 text-xs leading-5 text-muted">
-        Native NEAR deposits call <code className="font-mono">{NIXO_CONTRACT}.is_clean</code> at deposit time.
+        Native NEAR deposits call <code className="font-mono">{certContract}.is_clean</code> at deposit time.
         Dirty / warn / missing / expired certificates are refunded with no provenance row. Agent{" "}
         <code className="font-mono">execute</code> defaults to dry-run (debits remaining, no transfer).
         Explorers still show vault transfers — viewing keys do not hide them.
       </p>
-      {network !== "testnet" && (
-        <p className="mb-3 text-xs text-amber-300">Switch to testnet in Settings — the vault lives on testnet.</p>
-      )}
       {error && <p className="mb-3 text-xs text-danger break-all">{error}</p>}
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -132,7 +135,7 @@ export function OnchainVaultPanel() {
           <button
             type="button"
             disabled={busy}
-            onClick={() => void run("deposit", () => signAndSend([buildDepositCall(amount)]))}
+            onClick={() => void run("deposit", () => signAndSend([buildDepositCall(network, amount)]))}
             className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm text-background disabled:opacity-50"
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
@@ -149,7 +152,7 @@ export function OnchainVaultPanel() {
                     type="button"
                     onClick={() => setSelected(d.deposit_id)}
                     className={`w-full rounded-lg border px-2 py-1.5 text-left font-mono text-[11px] ${
-                      (dep?.deposit_id === d.deposit_id ? "border-accent/50 bg-accent/10" : "border-line")
+                      dep?.deposit_id === d.deposit_id ? "border-accent/50 bg-accent/10" : "border-line"
                     }`}
                   >
                     #{d.deposit_id} · {yoctoToNear(d.remaining)} / {yoctoToNear(d.amount)} NEAR · {d.status}
@@ -192,7 +195,7 @@ export function OnchainVaultPanel() {
                 const expires = (BigInt(Date.now()) * 1_000_000n + 7n * 24n * 3600n * 1_000_000_000n).toString();
                 void run("assign", () =>
                   signAndSend([
-                    buildAssignCall({
+                    buildAssignCall(network, {
                       deposit_id: dep.deposit_id,
                       agent_id: agentId,
                       max_per_tx_near: maxTx,
@@ -213,7 +216,7 @@ export function OnchainVaultPanel() {
               disabled={busy || !dep?.assignment_id}
               onClick={() => {
                 if (!dep?.assignment_id) return;
-                void run("revoke", () => signAndSend([buildRevokeCall(dep.assignment_id!)]));
+                void run("revoke", () => signAndSend([buildRevokeCall(network, dep.assignment_id!)]));
               }}
               className="rounded-lg border border-line px-3 py-2 text-xs hover:border-accent/50 disabled:opacity-50"
             >
@@ -225,7 +228,7 @@ export function OnchainVaultPanel() {
               onClick={() => {
                 if (!dep) return;
                 void run("withdraw", () =>
-                  signAndSend([buildWithdrawCall(dep.deposit_id, yoctoToNear(dep.remaining))]),
+                  signAndSend([buildWithdrawCall(network, dep.deposit_id, yoctoToNear(dep.remaining))]),
                 );
               }}
               className="rounded-lg border border-line px-3 py-2 text-xs hover:border-accent/50 disabled:opacity-50"
@@ -245,7 +248,7 @@ export function OnchainVaultPanel() {
               if (!dep?.assignment_id) return;
               void run("execute", () =>
                 signAndSend([
-                  buildExecuteCall({
+                  buildExecuteCall(network, {
                     assignment_id: dep.assignment_id!,
                     amount_near: execAmount,
                     target,
