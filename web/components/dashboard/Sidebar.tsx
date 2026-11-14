@@ -25,7 +25,7 @@ const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/trade", label: "Swap", icon: CandlestickChart, hint: "Confidential Intents" },
   { href: "/dashboard/clean-funds", label: "Clean funds", icon: ShieldCheck, hint: "NIXO certificate" },
-  { href: "/dashboard/agents", label: "Agents & vaults", icon: Bot, hint: "Funded by clean deposits", soon: true },
+  { href: "/dashboard/agents", label: "Agents & vaults", icon: Bot, hint: "Two-agent NIXO experiment" },
   { href: "/dashboard/keys", label: "Viewing keys", icon: KeyRound, hint: "Sell access to trades", soon: true },
 ];
 

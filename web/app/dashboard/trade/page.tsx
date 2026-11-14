@@ -9,7 +9,7 @@ import { PaperOrderForm } from "@/components/trade/PaperOrderForm";
 import { LiveSwap } from "@/components/trade/LiveSwap";
 import { PairIcons } from "@/components/trade/PairIcons";
 import { AgentSetupModal, DEFAULT_CONFIG } from "@/components/trade/AgentSetupModal";
-import { tradingApi, type Market, type SessionConfig, type Ticker } from "@/lib/trading/api";
+import { PROVIDER_SHORT, tradingApi, type Market, type SessionConfig, type Ticker } from "@/lib/trading/api";
 import { useTradingSession } from "@/lib/trading/useTradingSession";
 import { fmtPct, fmtPrice, fmtUsd, humanize, pnlTone } from "@/lib/trading/format";
 
@@ -87,7 +87,7 @@ export default function TradePage() {
               </span>
               {session.strategy && (
                 <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-muted">
-                  {humanize(session.strategy.strategy)} · {session.planner === "claude" ? "Claude" : "rules"}
+                  {humanize(session.strategy.strategy)} · {PROVIDER_SHORT[session.planner ?? "rules"] ?? session.planner}
                 </span>
               )}
             </>

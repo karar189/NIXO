@@ -33,8 +33,49 @@ export type SessionConfig = {
   risk_sizing_mode: "fixed" | "kelly" | "vol_scaling";
   poll_seconds: number;
   supervisor_interval_seconds: number;
-  llm_provider: "auto" | "claude" | "rules";
+  llm_provider: LlmChoice;
+  llm_model?: string | null;
   indicators: string[];
+};
+
+export type LlmProviderName = "anthropic" | "openai" | "deepseek" | "nvidia" | "nearai";
+export type LlmChoice = "auto" | "rules" | "claude" | LlmProviderName;
+
+export type LlmProvider = {
+  name: LlmProviderName;
+  label: string;
+  configured: boolean;
+  default_model: string;
+  /** Set while "auto" skips this provider after an auth/quota failure. */
+  cooldown: string | null;
+};
+
+export type PlannerInfo = {
+  llm_available: boolean;
+  provider: LlmProviderName | null;
+  model: string | null;
+  providers: LlmProvider[];
+};
+
+export type LlmAttempt = { provider: string; model: string | null; error: string | null; kind: string; latency_ms?: number };
+
+export type PingResult = {
+  provider: string;
+  model: string | null;
+  ok: boolean;
+  latency_ms?: number;
+  kind?: string;
+  error?: string;
+};
+
+export const PROVIDER_SHORT: Record<string, string> = {
+  anthropic: "Claude",
+  claude: "Claude",
+  openai: "OpenAI",
+  deepseek: "DeepSeek",
+  nvidia: "NVIDIA",
+  nearai: "NEAR AI",
+  rules: "rules",
 };
 
 export type StrategyPlan = { strategy: string; lookback: number; threshold: number; max_loss_pct: number };
@@ -66,8 +107,11 @@ export type Analysis = {
   strategy_plan: StrategyPlan;
   analysis_paragraph: string;
   quant_algo_description: string;
-  planner: "claude" | "rules";
+  /** "rules" or the provider that produced the plan. */
+  planner: string;
+  planner_model: string | null;
   planner_note: string | null;
+  planner_attempts: LlmAttempt[];
 };
 
 export type Fill = {
@@ -118,7 +162,8 @@ export type SessionStatus = {
     last_signal: number | null;
     config: SessionConfig;
     strategy: StrategyPlan | null;
-    planner: "claude" | "rules" | null;
+    planner: string | null;
+    planner_model: string | null;
     position: Position | null;
   };
 };
@@ -257,7 +302,7 @@ const post = <T>(path: string, account: string | undefined, body?: unknown) =>
 export const tradingApi = {
   markets: () => call<Market[]>("/trade/markets"),
   ticker: (symbol: string) => call<Ticker>(`/trade/ticker/${symbol}`),
-  planner: () => call<{ llm_available: boolean; model: string }>("/trade/planner"),
+  planner: () => call<PlannerInfo>("/trade/planner"),
   preview: (symbol: string, side: Side, notional_usdc: number) =>
     post<{ mark: number; fill: Fill }>("/trade/preview", undefined, { symbol, side, notional_usdc }),
   analyze: (account: string, cfg: SessionConfig) => post<Analysis>("/trade/analyze", account, cfg),
@@ -272,6 +317,13 @@ export const tradingApi = {
   logs: (account: string) => call<{ logs: LogEntry[] }>("/trade/logs?limit=200", { account }),
   statistics: (account: string) => call<Statistics>("/trade/statistics", { account }),
   history: (account: string) => call<{ decisions: Decision[]; trades: Trade[] }>("/trade/history?limit=100", { account }),
+};
+
+export const llmApi = {
+  providers: () => call<{ order: string[]; providers: LlmProvider[] }>("/llm/providers"),
+  models: (provider: string) =>
+    call<{ provider: string; default_model: string; models: string[] }>(`/llm/models/${encodeURIComponent(provider)}`),
+  ping: (provider: string, model?: string | null) => post<PingResult>("/llm/ping", undefined, { provider, model: model || null }),
 };
 
 export const intentsApi = {

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import health, intents, trading
+from app.routers import health, intents, llm, nixo, trading
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,3 +20,5 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(trading.router)
 app.include_router(intents.router)
+app.include_router(llm.router)
+app.include_router(nixo.router)

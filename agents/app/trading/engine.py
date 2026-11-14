@@ -46,7 +46,9 @@ class SessionConfig(BaseModel):
     kelly_fraction: float = Field(0.25, ge=0.01, le=1)
     poll_seconds: float = Field(3, ge=1, le=60)
     supervisor_interval_seconds: float = Field(120, ge=30, le=600)
-    llm_provider: Literal["auto", "claude", "rules"] = "auto"
+    llm_provider: Literal["auto", "claude", "anthropic", "openai", "deepseek", "nvidia", "nearai", "rules"] = "auto"
+    llm_model: str | None = Field(None, max_length=128, pattern=r"^[A-Za-z0-9._:/@-]+$",
+                                  description="Model override for the chosen provider")
     indicators: list[str] = Field(default_factory=list)
 
 
@@ -149,6 +151,7 @@ class Engine:
         result = await planner.make_plan(
             summary=summary, candidates=candidates, risk=cfg.risk_profile, margin=cfg.amount_usdc,
             leverage=cfg.leverage, indicators=cfg.indicators, recent_candles=recent, provider=cfg.llm_provider,
+            model=cfg.llm_model,
         )
         plan_id = uuid.uuid4().hex
         payload = {
@@ -183,7 +186,8 @@ class Engine:
         sp = plan["strategy_plan"]
         self._log(session, "start", f"Agent started on {market.pair}: {sp['strategy']} "
                   f"(lookback {sp['lookback']}, threshold {sp['threshold']:.4g}), "
-                  f"${cfg.amount_usdc:,.2f} margin at {cfg.leverage:g}x, planner: {plan['planner']}")
+                  f"${cfg.amount_usdc:,.2f} margin at {cfg.leverage:g}x, planner: {plan['planner']}"
+                  + (f" ({plan['planner_model']})" if plan.get("planner_model") else ""))
         self._log(session, "info", "Fills are priced by NEAR Intents 1Click dry-run quotes (no funds move).")
         self.sessions[account] = session
         session.task = asyncio.create_task(self._run(session))
@@ -288,7 +292,7 @@ class Engine:
                 if session.mode == "manual":
                     self._end(session, f"position closed ({trigger.replace('_', ' ').lower()})")
                 return
-            if session.mode == "agent" and planner.llm_available() and session.plan and session.plan["planner"] == "claude":
+            if session.mode == "agent" and planner.llm_available() and session.plan and session.plan["planner"] != "rules":
                 await self._maybe_supervise(session, mark)
                 if session.position is None:
                     return
@@ -349,6 +353,8 @@ class Engine:
             symbol=session.market.symbol, side=pos.side, entry=pos.entry_price, mark=mark, pnl=u,
             roe_pct=u / pos.margin * 100, strategy=pos.strategy or "-", tp=pos.tp_price, sl=pos.sl_price,
             dynamic=session.config.tp_sl_mode == "dynamic",
+            # Supervise with the provider/model that planned the session (falls through on failure).
+            provider=session.plan["planner"], model=session.plan.get("planner_model"),
         )
         self._log(session, "supervisor", f"Supervisor: {decision.action} — {decision.reasoning}")
         if decision.action == "CLOSE":
@@ -512,6 +518,7 @@ class Engine:
                 "config": session.config.model_dump(),
                 "strategy": plan["strategy_plan"] if plan else None,
                 "planner": plan["planner"] if plan else None,
+                "planner_model": plan.get("planner_model") if plan else None,
                 "position": pos.snapshot(session.last_price) if pos else None,
             },
         }
