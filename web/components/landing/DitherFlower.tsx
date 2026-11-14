@@ -111,14 +111,14 @@ void main() {
   p -= par;
 
   float g = 0.0;
-  /* main bloom, upper centre */
-  vec2 cA = vec2(aspect * 0.55, 0.56);
+  /* main bloom, upper centre of the panel */
+  vec2 cA = vec2(aspect * 0.5, 0.56);
   g = max(g, flower(p - cA, 6, 0.27, 0.074, 0.35, t, uBloom, 0.0));
   /* second, lower right, overlapping */
-  vec2 cB = vec2(aspect * 0.86, 0.30);
+  vec2 cB = vec2(aspect * 0.78, 0.30);
   g = max(g, flower(p - cB, 5, 0.19, 0.058, 1.1, t, clamp(uBloom * 1.25 - 0.2, 0.0, 1.0), 2.3) * 0.9);
   /* small bud, upper left */
-  vec2 cC = vec2(aspect * 0.2, 0.8);
+  vec2 cC = vec2(aspect * 0.18, 0.8);
   g = max(g, flower(p - cC, 5, 0.1, 0.036, 2.0, t, clamp(uBloom * 1.4 - 0.35, 0.0, 1.0), 4.1) * 0.8);
 
   /* stems + leaves */

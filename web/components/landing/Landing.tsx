@@ -211,10 +211,10 @@ export function Landing() {
             <HalftoneBloom background="#000000" color1="#1a2a6c" color2="#5b6cff" speed={35} size={170} angle={160} dotSize={7} hover={180} reach={480} style={{ minWidth: 0, minHeight: 0 }} />
           </div>
 
-          {/* Dithered flower in the empty right half (desktop only). */}
+          {/* Dithered flower — mid-right of the hero (desktop only). */}
           <DitherFlower
             active={introDone}
-            className="pointer-events-none absolute inset-y-0 right-0 hidden w-[min(46vw,640px)] lg:block"
+            className="pointer-events-none absolute inset-y-0 left-[34%] right-0 hidden lg:block"
             style={{ maskImage: "linear-gradient(to bottom, black 62%, transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, black 62%, transparent 100%)" }}
           />
 
@@ -225,9 +225,9 @@ export function Landing() {
               </p>
 
               <h1 data-hero-title style={{ visibility: "hidden" }} className="split-mask display mt-5 text-[clamp(2.25rem,5.5vw,4.5rem)] leading-[1.05] tracking-[-0.02em] text-foreground sm:mt-6">
-                Your AI trades.
+                Your agents trade <span className="text-accent">privately</span>.
                 <br />
-                Nobody <span className="text-accent">watches.</span>
+                World subscribes to your alpha
               </h1>
 
               <div data-hero-copy className="mt-7 sm:mt-8">
