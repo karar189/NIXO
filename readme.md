@@ -2,6 +2,8 @@
 
 > Prove your money is clean without proving where it's been.
 
+X post : https://x.com/soumikbaksi/status/2121753583729467691?a=DdbpO4r6_BAnfeuEi8o&s=46
+
 **NIXO** is a clean-funds passport and a gated trading layer for NEAR. A pinned checker runs inside an OutLayer TEE (Intel TDX), screens fund history against sanctions and known-hacker lists, and writes a short certificate on-chain. A vault accepts only currently Clean deposits and lets an AI agent trade under limits the contract enforces. Solvers (and any routing agent) can refuse an intent that is not Clean — without ever seeing balances, counterparties, or the hop path.
 
 **Privacy, stated honestly:** strategy can be private inside a TEE; the trade log can be encrypted and opened with viewing keys; fund history is checked without being revealed. **NIXO does not hide trades on-chain.** Vault deposits, Intents settlements, and ordinary transfers remain visible on explorers.
