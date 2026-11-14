@@ -12,6 +12,16 @@ export const DEMO_ACCOUNTS = [
 ] as const;
 export type DemoId = (typeof DEMO_ACCOUNTS)[number]["id"];
 
+/** Attached NEAR for `request_nixo` (must match server `NIXO_REQUEST_DEPOSIT`). */
+export const NIXO_REQUEST_DEPOSIT_NEAR = process.env.NEXT_PUBLIC_NIXO_REQUEST_DEPOSIT ?? "0.05";
+/** 300 TGas — OutLayer yield needs headroom. */
+export const NIXO_REQUEST_GAS = (300n * 10n ** 12n).toString();
+export const NIXO_REQUEST_DEPOSIT_YOCTO = (() => {
+  const [whole = "0", frac = ""] = NIXO_REQUEST_DEPOSIT_NEAR.split(".");
+  const frac24 = (frac + "0".repeat(24)).slice(0, 24);
+  return (BigInt(whole) * 10n ** 24n + BigInt(frac24 || "0")).toString();
+})();
+
 /** Mainnet explorer for the "check any wallet" preview (taint paths are mainnet data). */
 export const MAINNET_EXPLORER = "https://nearblocks.io";
 

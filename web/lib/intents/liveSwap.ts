@@ -1,9 +1,11 @@
 /**
- * Wallet-signed spot swaps through NEAR Intents (1Click, ORIGIN_CHAIN deposits).
+ * Wallet-signed spot swaps through Confidential Intents (1Click, ORIGIN_CHAIN
+ * deposits + confidentiality: "basic" — private-shard settlement like near.com).
  *
  * Flow: quote (dry) → quote (real, returns a deposit address) → the user signs
- * NEP-141 transfers to that address in Meteor → 1Click's solvers swap → the
- * output lands back in the user's NEAR account, or the input is refunded.
+ * NEP-141 transfers to that address in Meteor → solvers settle on the private
+ * shard → the output lands back in the user's NEAR account, or the input is refunded.
+ * Mainnet only; Intents has no testnet.
  */
 
 import type { TxRequest } from "@/components/wallet/WalletProvider";

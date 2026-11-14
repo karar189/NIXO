@@ -18,6 +18,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (ready && !accountId) router.replace("/");
   }, [ready, accountId, router]);
 
+  // Always keep `{children}` in the tree. Omitting it during the wallet gate
+  // drops route segments from rendering and trips Next.js instant-nav validation.
   if (!accountId) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
@@ -25,6 +27,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
           {ready ? "Redirecting…" : "Restoring wallet session…"}
         </p>
+        <div hidden aria-hidden="true">
+          {children}
+        </div>
       </div>
     );
   }

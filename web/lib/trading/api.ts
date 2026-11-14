@@ -282,7 +282,12 @@ export const intentsApi = {
     amount: string;
     account_id: string;
     slippage_bps: number;
-  }) => post<IntentsQuote>("/intents/quote", undefined, body),
+    confidentiality?: "public" | "basic" | "advanced";
+  }) =>
+    post<IntentsQuote>("/intents/quote", undefined, {
+      confidentiality: "basic",
+      ...body,
+    }),
   submitDeposit: (deposit_address: string, tx_hash: string, near_sender_account: string) =>
     post<unknown>("/intents/deposit", undefined, { deposit_address, tx_hash, near_sender_account }),
   status: (depositAddress: string) =>

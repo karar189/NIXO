@@ -37,7 +37,7 @@ function Node({ account, kind }: { account: string; kind: "seed" | "mid" | "subj
       <a href={`${MAINNET_EXPLORER}/address/${account}`} target="_blank" rel="noreferrer" className="font-mono text-sm hover:underline" title={account}>
         {short(account)}
       </a>
-      {kind === "seed" && <span className="ml-2 rounded bg-reject px-1.5 py-0.5 text-[11px] font-medium text-white dark:text-black">listed</span>}
+      {kind === "seed" && <span className="ml-2 rounded bg-reject px-1.5 py-0.5 text-[11px] font-medium text-black">listed</span>}
       {kind === "subject" && <span className="ml-2 text-xs text-muted">checked account</span>}
       {seed && (
         <div className="mt-1 text-xs">

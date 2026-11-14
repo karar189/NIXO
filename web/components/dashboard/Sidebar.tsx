@@ -23,7 +23,7 @@ type NavItem = { href: string; label: string; icon: LucideIcon; hint?: string; s
 
 const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/trade", label: "AI Trading", icon: CandlestickChart, hint: "Plan, paper & live" },
+  { href: "/dashboard/trade", label: "Swap", icon: CandlestickChart, hint: "Confidential Intents" },
   { href: "/dashboard/clean-funds", label: "Clean funds", icon: ShieldCheck, hint: "NIXO certificate" },
   { href: "/dashboard/agents", label: "Agents & vaults", icon: Bot, hint: "Funded by clean deposits", soon: true },
   { href: "/dashboard/keys", label: "Viewing keys", icon: KeyRound, hint: "Sell access to trades", soon: true },

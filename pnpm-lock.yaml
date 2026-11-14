@@ -12,6 +12,9 @@ importers:
 
   web:
     dependencies:
+      '@gsap/react':
+        specifier: 2.1.2
+        version: 2.1.2(gsap@3.13.0)(react@19.3.0)
       '@near-js/types':
         specifier: ^2.3.0
         version: 2.5.1
@@ -39,6 +42,9 @@ importers:
       '@near-wallet-selector/sender':
         specifier: 10.1.4
         version: 10.1.4(@near-js/crypto@2.5.1)(@near-js/keystores@2.5.1)(@near-js/providers@2.5.1)(@near-js/signers@2.5.1)(@near-js/tokens@2.5.1)(@near-js/transactions@2.5.1)(@near-js/types@2.5.1)(@near-js/utils@2.5.1)
+      gsap:
+        specifier: 3.13.0
+        version: 3.13.0
       lucide-react:
         specifier: ^1.72.0
         version: 1.72.0(@types/react@19.3.0)(react@19.3.0)
@@ -557,6 +563,16 @@ packages:
       '@eslint/core': 0.17.0
       levn: 0.4.1
     dev: true
+
+  /@gsap/react@2.1.2(gsap@3.13.0)(react@19.3.0):
+    resolution: {integrity: sha512-JqliybO1837UcgH2hVOM4VO+38APk3ECNrsuSM4MuXp+rbf+/2IG2K1YJiqfTcXQHH7XlA0m3ykniFYstfq0Iw==}
+    peerDependencies:
+      gsap: ^3.12.5
+      react: '>=17'
+    dependencies:
+      gsap: 3.13.0
+      react: 19.3.0
+    dev: false
 
   /@here-wallet/core@3.4.0(bn.js@5.2.1)(borsh@0.7.0):
     resolution: {integrity: sha512-DMBvKMjePmscqaqsVRYMG574STurCBzS3jh+nJ/0rjrFeP6V5h+ObIDmlFMfzE5E0Dz7NlowOdSfhpJQnPB4wg==}
@@ -3359,6 +3375,10 @@ packages:
   /graceful-fs@4.2.12:
     resolution: {integrity: sha512-iuyGF2E4oafQfPsRrG2wtY2ILupMhvtdrhzrxB+0VcjsPpSPttpfYdjnGFGsTi5MaJFjI1jOKHPQ6UTbTj9TAw==}
     dev: true
+
+  /gsap@3.13.0:
+    resolution: {integrity: sha512-QL7MJ2WMjm1PHWsoFrAQH/J8wUeqZvMtHO58qdekHpCfhvhSL4gSiz6vJf5EeMP0LOn3ZCprL2ki/gjED8ghVw==}
+    dev: false
 
   /has-bigints@1.1.0:
     resolution: {integrity: sha512-R3pbpkcIqv2Pm3dUwgjclDRVmWpTJW2DcMzcIhEXEx1oh/CEMObMm3KLmRJOdvhM7o4uQBnwr8pzRK2sJWIqfg==}

@@ -7,6 +7,7 @@ import { TradingViewChart } from "@/components/trade/TradingViewChart";
 import { AgentPanel } from "@/components/trade/AgentPanel";
 import { PaperOrderForm } from "@/components/trade/PaperOrderForm";
 import { LiveSwap } from "@/components/trade/LiveSwap";
+import { PairIcons } from "@/components/trade/PairIcons";
 import { AgentSetupModal, DEFAULT_CONFIG } from "@/components/trade/AgentSetupModal";
 import { tradingApi, type Market, type SessionConfig, type Ticker } from "@/lib/trading/api";
 import { useTradingSession } from "@/lib/trading/useTradingSession";
@@ -22,8 +23,8 @@ export default function TradePage() {
   const [ticker, setTicker] = useState<Ticker | null>(null);
   const [config, setConfig] = useState<SessionConfig>(DEFAULT_CONFIG);
   const [setupOpen, setSetupOpen] = useState(false);
-  const [rightTab, setRightTab] = useState<"agent" | "order">("agent");
-  const [orderMode, setOrderMode] = useState<"paper" | "live">("paper");
+  // Swap-first: confidential live swap is the primary panel.
+  const [rightTab, setRightTab] = useState<"swap" | "paper">("swap");
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -70,10 +71,16 @@ export default function TradePage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="display mr-1 text-lg">AI Trading</h1>
+          <div>
+            <p className="kicker !text-[10px]">Swap · Confidential Intents</p>
+            <h1 className="display text-lg">NEAR / USDC</h1>
+          </div>
+          <span className="rounded-full border border-accent-2/40 bg-accent-2/10 px-2 py-0.5 font-mono text-[11px] text-accent-2">
+            Confidential settlement
+          </span>
           {running && session ? (
             <>
-              <span className="rounded-full border border-accent-2/40 bg-accent-2/10 px-2 py-0.5 font-mono text-[11px] text-accent-2">PAPER</span>
+              <span className="rounded-full border border-line px-2 py-0.5 font-mono text-[11px] text-muted">PAPER DEMO</span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-accent">
                 <span className={`h-1.5 w-1.5 rounded-full bg-accent ${session.paused ? "" : "animate-pulse"}`} />
                 {session.paused ? "Paused" : session.mode === "agent" ? "Agent running" : "Position open"}
@@ -84,9 +91,7 @@ export default function TradePage() {
                 </span>
               )}
             </>
-          ) : (
-            <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-muted">Idle</span>
-          )}
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {running && session?.mode === "agent" && (
@@ -110,18 +115,20 @@ export default function TradePage() {
               <Square className="size-3.5" /> {session?.position ? "Close & stop" : "Stop"}
             </button>
           )}
-          <button
-            type="button"
-            disabled={running || markets.length === 0}
-            onClick={() => {
-              setConfig((c) => ({ ...c, symbol: activeSymbol }));
-              setSetupOpen(true);
-            }}
-            title={running ? "Stop the current session first" : undefined}
-            className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-background disabled:opacity-50"
-          >
-            <Settings2 className="size-3.5" /> Configure agent
-          </button>
+          {rightTab === "paper" && (
+            <button
+              type="button"
+              disabled={running || markets.length === 0}
+              onClick={() => {
+                setConfig((c) => ({ ...c, symbol: activeSymbol }));
+                setSetupOpen(true);
+              }}
+              title={running ? "Stop the current session first" : undefined}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line px-4 py-1.5 text-sm disabled:opacity-50"
+            >
+              <Settings2 className="size-3.5" /> Configure paper agent
+            </button>
+          )}
         </div>
       </div>
 
@@ -133,34 +140,50 @@ export default function TradePage() {
 
       {/* Market strip */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface px-4 py-3">
-        <label className="sr-only" htmlFor="market">Market</label>
-        <select
-          id="market"
-          value={activeSymbol}
-          disabled={running}
-          onChange={(e) => setSymbol(e.target.value)}
-          className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm font-medium disabled:opacity-70"
-        >
-          {markets.map((m) => (
-            <option key={m.symbol} value={m.symbol}>{m.pair}</option>
-          ))}
-        </select>
+        <label className="sr-only" htmlFor="market">
+          Market
+        </label>
+        <div className="relative flex items-center">
+          <span className="pointer-events-none absolute left-2.5 z-10">
+            <PairIcons base={activeSymbol} quote="USDC" />
+          </span>
+          <select
+            id="market"
+            value={activeSymbol}
+            disabled={running}
+            onChange={(e) => setSymbol(e.target.value)}
+            className="appearance-none rounded-lg border border-line bg-background py-1.5 pr-8 pl-[3.25rem] text-sm font-medium disabled:opacity-70"
+          >
+            {markets.map((m) => (
+              <option key={m.symbol} value={m.symbol}>
+                {m.pair}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-2.5 text-muted" aria-hidden>
+            ▾
+          </span>
+        </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider text-muted">Price</p>
           <p className="font-mono text-lg">{fmtPrice(price)}</p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider text-muted">24h</p>
-          <p className={`font-mono text-sm ${pnlTone(ticker?.change_pct)}`}>{ticker?.symbol === activeSymbol ? fmtPct(ticker.change_pct) : "—"}</p>
+          <p className={`font-mono text-sm ${pnlTone(ticker?.change_pct)}`}>
+            {ticker?.symbol === activeSymbol ? fmtPct(ticker.change_pct) : "—"}
+          </p>
         </div>
         <div className="hidden sm:block">
           <p className="text-[10px] uppercase tracking-wider text-muted">24h range</p>
-          <p className="font-mono text-sm">{ticker?.symbol === activeSymbol ? `${fmtPrice(ticker.low)} – ${fmtPrice(ticker.high)}` : "—"}</p>
+          <p className="font-mono text-sm">
+            {ticker?.symbol === activeSymbol ? `${fmtPrice(ticker.low)} – ${fmtPrice(ticker.high)}` : "—"}
+          </p>
         </div>
         {position && (
           <>
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted">Position</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted">Paper position</p>
               <p className={`font-mono text-sm ${position.side === "LONG" ? "text-accent" : "text-danger"}`}>
                 {position.side} {position.leverage}x
               </p>
@@ -172,7 +195,7 @@ export default function TradePage() {
           </>
         )}
         <span className="ml-auto hidden rounded-full border border-line px-2.5 py-1 text-[11px] text-muted md:inline">
-          Fills priced by NEAR Intents · {network}
+          Confidential Intents · {network}
         </span>
       </div>
 
@@ -191,45 +214,49 @@ export default function TradePage() {
 
         <aside className="rounded-2xl border border-line bg-surface p-4">
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-line bg-background p-1" role="tablist">
-            {(["agent", "order"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                role="tab"
-                aria-selected={rightTab === t}
-                onClick={() => setRightTab(t)}
-                className={`rounded-lg py-1.5 text-sm ${rightTab === t ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"}`}
-              >
-                {t === "agent" ? "Agent" : "Order"}
-              </button>
-            ))}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={rightTab === "swap"}
+              onClick={() => setRightTab("swap")}
+              className={`rounded-lg py-1.5 text-sm ${rightTab === "swap" ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"}`}
+            >
+              Swap
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={rightTab === "paper"}
+              onClick={() => setRightTab("paper")}
+              className={`rounded-lg py-1.5 text-sm ${rightTab === "paper" ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"}`}
+            >
+              Paper agent
+            </button>
           </div>
 
-          {rightTab === "agent" ? (
-            <AgentPanel account={account} status={status} logs={logs} stats={stats} />
+          {!market ? (
+            <p className="text-sm text-muted">Loading markets…</p>
+          ) : rightTab === "swap" ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted">
+                Spot swap via <span className="text-accent-2">Confidential Intents</span> — amount in, amount out. Not an AMM pool or orderbook.
+              </p>
+              <LiveSwap market={market} markPrice={price || null} />
+            </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex rounded-lg border border-line p-0.5 text-xs">
-                {(["paper", "live"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    aria-pressed={orderMode === m}
-                    onClick={() => setOrderMode(m)}
-                    className={`flex-1 rounded-md py-1.5 ${orderMode === m ? "bg-surface-2 text-foreground" : "text-muted"}`}
-                  >
-                    {m === "paper" ? "Paper (leverage)" : "Live (spot, mainnet)"}
-                  </button>
-                ))}
-              </div>
-              {!market ? (
-                <p className="text-sm text-muted">Loading markets…</p>
-              ) : orderMode === "paper" ? (
-                running ? (
-                  <p className="rounded-xl border border-line bg-background/50 p-4 text-sm text-muted">
+              <p className="rounded-lg border border-line bg-background/50 px-3 py-2 text-xs text-muted">
+                Demo only: leveraged paper positions priced with confidential dry quotes. No real funds.
+              </p>
+              {running ? (
+                <>
+                  <AgentPanel account={account} status={status} logs={logs} stats={stats} />
+                  <p className="text-sm text-muted">
                     A {session?.mode === "agent" ? "paper agent" : "paper position"} is running on {session?.pair}. Stop it to place a new paper order.
                   </p>
-                ) : (
+                </>
+              ) : (
+                <>
                   <PaperOrderForm
                     account={account}
                     market={market}
@@ -237,12 +264,10 @@ export default function TradePage() {
                     busy={busy}
                     onOpened={() => {
                       void refresh();
-                      setRightTab("agent");
                     }}
                   />
-                )
-              ) : (
-                <LiveSwap market={market} markPrice={price || null} />
+                  <AgentPanel account={account} status={status} logs={logs} stats={stats} />
+                </>
               )}
             </div>
           )}
@@ -259,7 +284,7 @@ export default function TradePage() {
           onStarted={(cfg) => {
             setConfig(cfg);
             setSymbol(cfg.symbol);
-            setRightTab("agent");
+            setRightTab("paper");
             void refresh();
           }}
         />

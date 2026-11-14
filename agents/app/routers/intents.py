@@ -8,6 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app.config import settings
 from app.trading import oneclick
 from app.trading.markets import MARKETS, USDC_NEAR
 
@@ -24,6 +25,8 @@ class LiveQuoteBody(BaseModel):
     account_id: str = Field(min_length=2, max_length=64)
     slippage_bps: int = Field(100, ge=10, le=500)
     swap_type: Literal["EXACT_INPUT"] = "EXACT_INPUT"
+    # near.com-style private-shard settlement; default confidential (not public Intents).
+    confidentiality: Literal["public", "basic", "advanced"] = "basic"
 
 
 class DepositBody(BaseModel):
@@ -43,6 +46,13 @@ async def live_quote(body: LiveQuoteBody) -> dict:
         raise HTTPException(400, "Unsupported asset for live swaps")
     if body.origin_asset == body.destination_asset:
         raise HTTPException(400, "Origin and destination must differ")
+    # 1Click rejects confidential quotes without a partner JWT.
+    if body.confidentiality != "public" and not settings.oneclick_jwt:
+        raise HTTPException(
+            503,
+            "ONECLICK_JWT is required for Confidential Intents quotes. "
+            "Set it in the root .env (1Click partner JWT), then restart agents.",
+        )
     try:
         return await oneclick.quote({
             "dry": body.dry,
@@ -56,6 +66,7 @@ async def live_quote(body: LiveQuoteBody) -> dict:
             "recipientType": "DESTINATION_CHAIN",
             "refundTo": body.account_id,
             "refundType": "ORIGIN_CHAIN",
+            "confidentiality": body.confidentiality,
         })
     except oneclick.OneClickError as err:
         raise _err(err) from err

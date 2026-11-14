@@ -26,8 +26,8 @@ const nowMs = () => Date.now();
 
 const STEPS = [
   { key: "wallet", label: "In your wallet" },
-  { key: "deposit", label: "At the NEAR Intents deposit address" },
-  { key: "solver", label: "Solver executing the swap" },
+  { key: "deposit", label: "At the Confidential Intents deposit" },
+  { key: "solver", label: "Private-shard settlement" },
   { key: "done", label: "Back in your wallet" },
 ] as const;
 
@@ -50,10 +50,10 @@ function stepIndex(status: LiveSwapRecord["status"]): number {
 const STATUS_COPY: Record<string, { text: string; tone: string }> = {
   SIGNING: { text: "Waiting for your signature in Meteor", tone: "text-muted" },
   CANCELLED: { text: "Cancelled before anything was sent. Funds never left your wallet.", tone: "text-muted" },
-  PENDING_DEPOSIT: { text: "Waiting for 1Click to see your deposit", tone: "text-muted" },
-  KNOWN_DEPOSIT_TX: { text: "Deposit detected, queued for a solver", tone: "text-muted" },
-  PROCESSING: { text: "A solver is executing the swap", tone: "text-accent-2" },
-  SUCCESS: { text: "Swap complete. Tokens delivered to your account.", tone: "text-accent" },
+  PENDING_DEPOSIT: { text: "Waiting for Confidential Intents to see your deposit", tone: "text-muted" },
+  KNOWN_DEPOSIT_TX: { text: "Deposit detected, queued for confidential settlement", tone: "text-muted" },
+  PROCESSING: { text: "Settling on the private shard (amounts/route stay off the public explorer)", tone: "text-accent-2" },
+  SUCCESS: { text: "Confidential swap complete. Tokens delivered to your account.", tone: "text-accent" },
   INCOMPLETE_DEPOSIT: { text: "Deposit was below the quoted amount. It will be refunded.", tone: "text-amber-300" },
   REFUNDED: { text: "Swap didn't execute. Your deposit was refunded to your account.", tone: "text-amber-300" },
   FAILED: { text: "Swap failed. Check the explorer; contact 1Click support with the deposit address.", tone: "text-danger" },
@@ -94,7 +94,7 @@ function Tracker({ swap, network }: { swap: LiveSwapRecord; network: "mainnet" |
       {swap.status !== "SIGNING" && swap.status !== "CANCELLED" && (
         <div className="mt-2 flex flex-wrap gap-3 text-[11px]">
           <a href={intentsExplorerUrl(swap.depositAddress)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent-2 hover:underline">
-            NEAR Intents explorer <ExternalLink className="size-3" />
+            Intents explorer <ExternalLink className="size-3" />
           </a>
           {swap.txHash && (
             <a href={txExplorerUrl(network, swap.txHash)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent-2 hover:underline">
@@ -165,10 +165,10 @@ export function LiveSwap({ market, markPrice }: { market: Market; markPrice: num
   if (network !== "mainnet") {
     return (
       <div className="rounded-xl border border-line bg-background/50 p-4 text-sm">
-        <p className="font-medium">Live swaps run on mainnet</p>
+        <p className="font-medium">Confidential swaps run on mainnet</p>
         <p className="mt-1 text-muted">
-          NEAR Intents has no testnet, so live trading is off while you&apos;re on testnet. Switch to mainnet in{" "}
-          <Link href="/dashboard/settings" className="text-accent hover:underline">Settings</Link>. Paper trading works on both.
+          Confidential Intents has no testnet — real settlement is mainnet-only. Switch to mainnet in{" "}
+          <Link href="/dashboard/settings" className="text-accent hover:underline">Settings</Link>. Paper quotes still use mainnet dry pricing.
         </p>
       </div>
     );
@@ -204,8 +204,13 @@ export function LiveSwap({ market, markPrice }: { market: Market; markPrice: num
     try {
       setQuote(
         await intentsApi.quote({
-          dry: true, origin_asset: a.origin, destination_asset: a.destination,
-          amount: parsed.toString(), account_id: account, slippage_bps: slippage,
+          dry: true,
+          origin_asset: a.origin,
+          destination_asset: a.destination,
+          amount: parsed.toString(),
+          account_id: account,
+          slippage_bps: slippage,
+          confidentiality: "basic",
         }),
       );
     } catch (e) {
@@ -223,8 +228,13 @@ export function LiveSwap({ market, markPrice }: { market: Market; markPrice: num
     try {
       // A non-dry quote reserves a deposit address for this swap.
       const real = await intentsApi.quote({
-        dry: false, origin_asset: a.origin, destination_asset: a.destination,
-        amount: parsed.toString(), account_id: account, slippage_bps: slippage,
+        dry: false,
+        origin_asset: a.origin,
+        destination_asset: a.destination,
+        amount: parsed.toString(),
+        account_id: account,
+        slippage_bps: slippage,
+        confidentiality: "basic",
       });
       const depositAddress = real.quote.depositAddress;
       if (!depositAddress) throw new Error("1Click didn't return a deposit address");
@@ -265,6 +275,10 @@ export function LiveSwap({ market, markPrice }: { market: Market; markPrice: num
 
   return (
     <div className="space-y-4">
+      <p className="rounded-lg border border-accent-2/30 bg-accent-2/5 px-3 py-2 text-[11px] leading-5 text-muted">
+        Quotes use <span className="text-accent-2">confidentiality: basic</span>. Needs{" "}
+        <span className="font-mono text-foreground">ONECLICK_JWT</span> in the root .env (1Click partner JWT), then restart agents.
+      </p>
       <div className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-background p-1" role="radiogroup" aria-label="Direction">
         {(["buy", "sell"] as const).map((d) => (
           <button
@@ -340,6 +354,7 @@ export function LiveSwap({ market, markPrice }: { market: Market; markPrice: num
             ["Rate", rate ? `${fmtPrice(rate)} USDC / NEAR` : "—"],
             ["Vs mark price", vsMark !== null ? `${vsMark >= 0 ? "+" : ""}${vsMark.toFixed(1)} bps` : "—"],
             ["Est. time", `~${q.timeEstimate}s`],
+            ["Rail", "Confidential Intents (basic)"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-3">
               <dt className="text-muted">{k}</dt>
@@ -358,7 +373,7 @@ export function LiveSwap({ market, markPrice }: { market: Market; markPrice: num
           disabled={quoting || !parsed || insufficient || Boolean(active)}
           className="w-full rounded-full border border-line bg-surface-2 py-2.5 text-sm font-medium disabled:opacity-50"
         >
-          {quoting ? "Getting quote…" : "Get NEAR Intents quote"}
+          {quoting ? "Getting quote…" : "Get confidential quote"}
         </button>
       ) : (
         <button
@@ -367,17 +382,18 @@ export function LiveSwap({ market, markPrice }: { market: Market; markPrice: num
           disabled={executing || insufficient || Boolean(active)}
           className={`w-full rounded-full py-2.5 text-sm font-medium text-background disabled:opacity-50 ${direction === "buy" ? "bg-accent" : "bg-danger"}`}
         >
-          {executing ? "Confirm in Meteor…" : `Swap with Meteor · ${direction === "buy" ? "buy" : "sell"} NEAR`}
+          {executing ? "Confirm in Meteor…" : `Confidential swap · ${direction === "buy" ? "buy" : "sell"} NEAR`}
         </button>
       )}
       {active && <p className="text-center text-[11px] text-muted">One live swap at a time. Wait for the current one to finish.</p>}
       <p className="text-center text-[11px] leading-5 text-muted">
-        Real funds on mainnet. Spot only (1x): NEAR Intents swaps tokens, it doesn&apos;t lend. You receive wNEAR when buying.
+        <span className="text-accent-2">Confidential settlement</span> — size and route stay off the public explorer; deposit edges may still show.
+        Spot only (1x). Mainnet funds. You receive wNEAR when buying.
       </p>
 
       {swaps.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted">Live swaps</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted">Confidential swaps</p>
           {swaps.slice(0, 3).map((s) => (
             <Tracker key={s.depositAddress} swap={s} network={network} />
           ))}

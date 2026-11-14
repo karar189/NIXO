@@ -79,7 +79,7 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
-            <span className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-accent to-deep font-mono text-[11px] font-semibold uppercase text-white">
+            <span className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-accent to-deep font-mono text-[11px] font-semibold uppercase text-accent-ink">
               {accountId[0]}
             </span>
             <span className="max-w-[9rem] truncate font-mono text-xs sm:max-w-none">{shortAccount(accountId)}</span>

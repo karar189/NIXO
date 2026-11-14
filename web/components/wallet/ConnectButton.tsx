@@ -10,8 +10,17 @@ import { useWallet } from "./WalletProvider";
  * "Connect wallet" opens the NEAR wallet picker (Meteor, MyNearWallet, HERE,
  * Sender, Intear, Nightly). Once signed in it becomes "Open dashboard"; a
  * sign-in started here goes straight to the dashboard.
+ * `invert` renders black-on-yellow, for use on an accent panel.
  */
-export function ConnectButton({ variant = "compact", showError = false }: { variant?: "primary" | "compact"; showError?: boolean }) {
+export function ConnectButton({
+  variant = "compact",
+  showError = false,
+  invert = false,
+}: {
+  variant?: "primary" | "compact";
+  showError?: boolean;
+  invert?: boolean;
+}) {
   const { ready, accountId, connecting, error, connect } = useWallet();
   const router = useRouter();
   const requested = useRef(false);
@@ -23,7 +32,7 @@ export function ConnectButton({ variant = "compact", showError = false }: { vari
     }
   }, [accountId, router]);
 
-  const cls = variant === "primary" ? "btn-primary" : "btn-primary !px-4 !py-2 !text-[11px]";
+  const cls = ["btn-primary", invert ? "btn-inverse" : "", variant === "compact" ? "!px-4 !py-2 !text-[11px]" : ""].join(" ");
 
   if (accountId) {
     return (

@@ -1,30 +1,130 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { DEMO_ACCOUNTS, EXPLORER, type DemoId } from "@/lib/config";
+import {
+  DEMO_ACCOUNTS,
+  EXPLORER,
+  NIXO_CONTRACT,
+  NIXO_REQUEST_DEPOSIT_NEAR,
+  NIXO_REQUEST_DEPOSIT_YOCTO,
+  NIXO_REQUEST_GAS,
+  type DemoId,
+} from "@/lib/config";
 import { getCertificate, nsToDate, type CertificateView } from "@/lib/nixo-sdk";
 import { CertificateCard } from "@/components/CertificateCard";
 import { MockTag } from "@/components/MockTag";
+import { useWallet } from "@/components/wallet/WalletProvider";
 
 type Phase = "idle" | "sending" | "waiting" | "done" | "error";
 const POLL_MS = 2000;
 const TIMEOUT_MS = 240_000;
 
-export default function Home() {
+async function waitForCertificate(account: string, sinceMs: number): Promise<CertificateView> {
+  const started = Date.now();
+  while (Date.now() - started < TIMEOUT_MS) {
+    await new Promise((r) => setTimeout(r, POLL_MS));
+    const v = await getCertificate(account).catch(() => null);
+    if (v && nsToDate(v.certificate.issued_at_ns).getTime() >= sinceMs) return v;
+  }
+  throw new Error("Timed out waiting for the TEE result. Check the transaction for a nixo_failed event.");
+}
+
+function txHashFromOutcomes(outcomes: unknown[]): string | null {
+  const last = outcomes[outcomes.length - 1] as { transaction_outcome?: { id?: string }; transaction?: { hash?: string } } | undefined;
+  return last?.transaction_outcome?.id ?? last?.transaction?.hash ?? null;
+}
+
+export default function CleanFundsPage() {
+  const { accountId, network, ready, connect, signAndSend } = useWallet();
+
   const [who, setWho] = useState<DemoId>("alice");
   const [phase, setPhase] = useState<Phase>("idle");
+  const [mode, setMode] = useState<"wallet" | "demo" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [view, setView] = useState<CertificateView | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [explain, setExplain] = useState<{ text?: string; error?: string; attestation?: { fetched: boolean; nonce_echoed: boolean } } | null>(null);
 
-  async function run() {
+  const busy = phase === "sending" || phase === "waiting";
+
+  async function finish(account: string, requestedAtMs: number, hash: string | null) {
+    setTxHash(hash);
+    setPhase("waiting");
+    const since = requestedAtMs - 30_000;
+    const tick = setInterval(() => setElapsed(Math.round((Date.now() - requestedAtMs) / 1000)), 500);
+    try {
+      const v = await waitForCertificate(account, since);
+      setView(v);
+      setPhase("done");
+      fetch("/api/explain", { method: "POST", body: JSON.stringify({ account }) })
+        .then((r) => r.json())
+        .then(setExplain)
+        .catch((e) => setExplain({ error: String(e) }));
+    } catch (e) {
+      setPhase("error");
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      clearInterval(tick);
+    }
+  }
+
+  async function runWallet() {
+    setMode("wallet");
     setPhase("sending");
     setError(null);
     setView(null);
     setTxHash(null);
     setExplain(null);
+    setElapsed(0);
+
+    if (!ready) {
+      setPhase("error");
+      setError("Wallet selector is still loading.");
+      return;
+    }
+    if (!accountId) {
+      setPhase("idle");
+      await connect();
+      return;
+    }
+    if (network !== "testnet") {
+      setPhase("error");
+      setError("Switch to testnet in Settings — NIXO certificates are on testnet.");
+      return;
+    }
+
+    const requestedAtMs = Date.now();
+    try {
+      const outcomes = await signAndSend([
+        {
+          receiverId: NIXO_CONTRACT,
+          actions: [
+            {
+              methodName: "request_nixo",
+              args: {},
+              gas: NIXO_REQUEST_GAS,
+              deposit: NIXO_REQUEST_DEPOSIT_YOCTO,
+            },
+          ],
+        },
+      ]);
+      await finish(accountId, requestedAtMs, txHashFromOutcomes(outcomes));
+    } catch (e) {
+      setPhase("error");
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function runDemo() {
+    setMode("demo");
+    setPhase("sending");
+    setError(null);
+    setView(null);
+    setTxHash(null);
+    setExplain(null);
+    setElapsed(0);
+
     const res = await fetch("/api/request", { method: "POST", body: JSON.stringify({ id: who }) });
     const body = await res.json();
     if (!res.ok) {
@@ -32,28 +132,16 @@ export default function Home() {
       setError(body.error ?? "request failed");
       return;
     }
-    setTxHash(body.txHash ?? null);
-    setPhase("waiting");
-    const started = Date.now();
-    // Allow for clock skew between this browser and block time.
-    const since = body.requestedAtMs - 30_000;
-    while (Date.now() - started < TIMEOUT_MS) {
-      await new Promise((r) => setTimeout(r, POLL_MS));
-      setElapsed(Math.round((Date.now() - started) / 1000));
-      const v = await getCertificate(body.account).catch(() => null);
-      if (v && nsToDate(v.certificate.issued_at_ns).getTime() >= since) {
-        setView(v);
-        setPhase("done");
-        fetch("/api/explain", { method: "POST", body: JSON.stringify({ account: body.account }) })
-          .then((r) => r.json())
-          .then(setExplain)
-          .catch((e) => setExplain({ error: String(e) }));
-        return;
-      }
-    }
-    setPhase("error");
-    setError("Timed out waiting for the TEE result. Check the transaction for a nixo_failed event.");
+    await finish(body.account as string, body.requestedAtMs as number, (body.txHash as string | null) ?? null);
   }
+
+  const walletButtonLabel = !accountId
+    ? "Connect wallet to prove"
+    : busy && mode === "wallet"
+      ? phase === "sending"
+        ? "Confirm in wallet…"
+        : `Checking in sealed enclave… ${elapsed}s`
+      : "Prove my funds with this wallet";
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
@@ -61,19 +149,46 @@ export default function Home() {
         <p className="kicker">Clean funds · NIXO certificate</p>
         <h1 className="display mt-3 text-[clamp(1.3rem,2.6vw,1.9rem)] leading-snug">Prove your money is clean without proving where it&apos;s been.</h1>
         <p className="mt-3 text-muted">
-          A sealed Intel TDX enclave screens your confidential history against sanctions and hacker lists and outputs only a verdict. NEAR records it as a
-          7-day certificate any exchange can check with one call.
+          A sealed Intel TDX enclave screens history against sanctions and hacker lists and outputs only a verdict. NEAR records it as a 7-day certificate
+          any exchange can check with one call.
         </p>
       </section>
 
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <div className="text-sm font-medium">Demo wallet</div>
+      <section id="wallet" className="scroll-mt-24 rounded-xl border border-accent/40 bg-surface p-5">
+        <div className="text-sm font-medium">Your wallet</div>
+        <p className="mt-1 text-sm text-muted">
+          This opens your NEAR wallet to sign <span className="font-mono">request_nixo</span> on {NIXO_CONTRACT} (~{NIXO_REQUEST_DEPOSIT_NEAR} NEAR deposit for
+          the TEE run).
+        </p>
+        {accountId ? (
+          <p className="mt-3 font-mono text-sm text-accent-2">{accountId}</p>
+        ) : (
+          <p className="mt-3 text-sm text-muted">No wallet connected yet.</p>
+        )}
+        <p className="mt-3 text-xs text-muted">
+          <MockTag>MVP</MockTag> The enclave only has fixture histories for Alice and Mallory. A random wallet usually can&apos;t be
+          processed (lack of history) — that still proves the real sign → TEE → certificate path.
+        </p>
+        <button onClick={runWallet} disabled={busy} className="mt-4 w-full rounded-lg bg-accent px-4 py-3 font-medium text-accent-ink disabled:opacity-50">
+          {walletButtonLabel}
+        </button>
+        {mode === "wallet" && txHash && (
+          <a className="mt-2 block text-xs text-muted underline" href={`${EXPLORER}/txns/${txHash}`} target="_blank" rel="noreferrer">
+            transaction {txHash.slice(0, 10)}…
+          </a>
+        )}
+        {mode === "wallet" && error && <p className="mt-3 text-sm text-reject">{error}</p>}
+      </section>
+
+      <section id="demo" className="scroll-mt-24 rounded-xl border border-border bg-surface p-5">
+        <div className="text-sm font-medium">Judge demo (no wallet)</div>
+        <p className="mt-1 text-sm text-muted">Server-signs as a pre-seeded account so judges can get a Clean or Rejected certificate without connecting.</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {DEMO_ACCOUNTS.map((a) => (
             <button
               key={a.id}
               onClick={() => setWho(a.id)}
-              disabled={phase === "sending" || phase === "waiting"}
+              disabled={busy}
               className={`rounded-lg border p-3 text-left ${who === a.id ? "border-accent ring-1 ring-accent" : "border-border"}`}
             >
               <div className="font-mono text-sm">{a.label}</div>
@@ -82,21 +197,25 @@ export default function Home() {
           ))}
         </div>
         <p className="mt-3 text-xs text-muted">
-          <MockTag>simulated</MockTag> In the MVP the confidential history comes from fixtures compiled into the checker, not a live 1Click read.
+          <MockTag>simulated</MockTag> History for these two accounts is compiled into the checker WASM, not a live 1Click read.
         </p>
         <button
-          onClick={run}
-          disabled={phase === "sending" || phase === "waiting"}
-          className="mt-4 w-full rounded-lg bg-accent px-4 py-3 font-medium text-white disabled:opacity-50 dark:text-black"
+          onClick={runDemo}
+          disabled={busy}
+          className="mt-4 w-full rounded-lg border border-border bg-background px-4 py-3 font-medium disabled:opacity-50 hover:border-accent"
         >
-          {phase === "sending" ? "Sending request…" : phase === "waiting" ? `Checking in sealed enclave… ${elapsed}s` : "Prove my funds are clean"}
+          {busy && mode === "demo"
+            ? phase === "sending"
+              ? "Sending request…"
+              : `Checking in sealed enclave… ${elapsed}s`
+            : `Run demo as ${who === "alice" ? "Alice" : "Mallory"}`}
         </button>
-        {txHash && (
+        {mode === "demo" && txHash && (
           <a className="mt-2 block text-xs text-muted underline" href={`${EXPLORER}/txns/${txHash}`} target="_blank" rel="noreferrer">
             transaction {txHash.slice(0, 10)}…
           </a>
         )}
-        {error && <p className="mt-3 text-sm text-reject">{error}</p>}
+        {mode === "demo" && error && <p className="mt-3 text-sm text-reject">{error}</p>}
       </section>
 
       {view && (

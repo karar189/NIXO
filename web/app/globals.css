@@ -1,35 +1,42 @@
 @import "tailwindcss";
 
-/* NIXO design system: one dark theme for the whole site.
-   Deep navy canvas, white type, electric-blue actions, ice-blue details.
-   Hairline borders and near-square corners: a trading desk, not a toy.
-   Green and red appear only where they carry meaning (clean / rejected). */
+/* NIXO design system.
+   Palette: Black #000000 · Deep Blue #191D32 · White #FFFFFF · Accent Yellow #D4FE08,
+   plus one blue gradient used sparingly behind panels.
+   Pixel-fused shapes, hairline grids, tight grotesk headlines with an italic serif
+   for emphasis. Green and red only where they carry meaning (clean / rejected). */
 :root {
   color-scheme: dark;
 
-  --background: #04070e;
-  --surface: #08101f;
-  --surface-2: #0d1830;
-  --line: #16233d;
-  --border: #16233d;
-  --foreground: #edf3ff;
-  --muted: #8495b7;
+  --black: #000000;
+  --background: #000000;
+  --surface: #0b0d18;
+  --surface-2: #191d32; /* Deep Blue, Pantone 5255 C */
+  --line: #1f2440;
+  --border: #1f2440;
+  --foreground: #ffffff;
+  --muted: #8d93b0;
 
-  --accent: #3d8bff; /* electric blue: primary actions */
-  --accent-2: #9cc4ff; /* ice blue: secondary details */
-  --deep: #0b2a66; /* dark blue: fills behind accent */
+  --accent: #d4fe08; /* Accent Yellow, Pantone 381 C */
+  --accent-ink: #0a0c00; /* text on yellow */
+  --accent-2: #8e9bff; /* periwinkle from the gradient: secondary details */
+  --deep: #191d32;
+  --blue: #3f4ccf;
+  --gradient: linear-gradient(160deg, #5460e0 0%, #2a3285 38%, #191d32 72%, #0b0d18 100%);
 
   --clean: #3ed6a4;
   --clean-bg: #072a22;
   --reject: #ff6b7d;
   --reject-bg: #2a0c14;
   --danger: #ff6b7d;
-  --mock: #9cc4ff; /* "demo / preview" tags */
-  --mock-bg: #0d1f3d;
-  --warn: #f1cf6b;
+  --mock: #8e9bff; /* "demo / preview" tags */
+  --mock-bg: #161a36;
+  --warn: #d4fe08;
+  --warn-bg: #1f2400;
 }
 
 @theme inline {
+  --color-black: var(--black);
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -38,8 +45,10 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-accent-2: var(--accent-2);
   --color-deep: var(--deep);
+  --color-blue: var(--blue);
   --color-clean: var(--clean);
   --color-clean-bg: var(--clean-bg);
   --color-reject: var(--reject);
@@ -48,17 +57,19 @@
   --color-mock: var(--mock);
   --color-mock-bg: var(--mock-bg);
   --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-michroma);
+  --font-display: var(--font-grotesk);
+  --font-serif: var(--font-serif-italic);
 
   /* Crisp, near-square corners everywhere. */
   --radius-sm: 2px;
   --radius-md: 3px;
   --radius-lg: 4px;
-  --radius-xl: 5px;
-  --radius-2xl: 6px;
-  --radius-3xl: 8px;
+  --radius-xl: 6px;
+  --radius-2xl: 10px;
+  --radius-3xl: 18px;
 }
 
 html {
@@ -71,11 +82,12 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent-2);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -88,12 +100,32 @@ body {
   color: var(--muted);
 }
 
-/* Wide display type for headlines. */
+/* Tight grotesk display type for headlines. */
 .display {
-  font-family: var(--font-michroma), var(--font-geist-sans), sans-serif;
-  letter-spacing: 0.02em;
+  font-family: var(--font-grotesk), var(--font-geist-sans), sans-serif;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  font-weight: 500;
+}
+
+/* Wide tracked wordmark. */
+.wordmark {
+  font-family: var(--font-michroma), var(--font-grotesk), sans-serif;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
+}
+
+/* Italic serif for emphasis, like the "Primary / Accent / Gradient" labels. */
+.serif {
+  font-family: var(--font-serif-italic), Georgia, serif;
+  font-style: italic;
   font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Blue gradient fill. */
+.gradient-blue {
+  background: var(--gradient);
 }
 
 /* Diagonal hatching, used behind status panels. */
@@ -101,39 +133,74 @@ body {
   background-image: repeating-linear-gradient(-32deg, transparent 0 6px, color-mix(in srgb, var(--accent) 10%, transparent) 6px 7px);
 }
 
-/* Faint blueprint grid. */
+/* Blueprint grid: the etherfuse-style board the pixel shapes sit on. */
 .grid-bg {
   background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--line) 80%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--line) 80%, transparent) 1px, transparent 1px);
-  background-size: 56px 56px;
+    linear-gradient(to right, color-mix(in srgb, var(--line) 85%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--line) 85%, transparent) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 .grid-fade {
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 30%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 30%, black 35%, transparent 80%);
 }
 
-/* Primary and secondary actions. */
+/* Bottom status bar / marquee crawl (seamless loop). */
+@keyframes news-ticker {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+.news-ticker-track {
+  animation: news-ticker 40s linear infinite;
+  will-change: transform;
+}
+.news-ticker:hover .news-ticker-track {
+  animation-play-state: paused;
+}
+.marquee-track {
+  animation: news-ticker 28s linear infinite;
+  will-change: transform;
+}
+
+/* Primary and secondary actions: yellow pill on black, like the CONTACT button. */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   background: var(--accent);
-  color: #fff;
-  padding: 0.7rem 1.25rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  color: var(--accent-ink);
+  padding: 0.75rem 1.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   border-radius: 3px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 60%, white 10%), 0 10px 40px -12px color-mix(in srgb, var(--accent) 70%, transparent);
-  transition: filter 0.15s, transform 0.15s;
+  box-shadow: 4px 4px 0 0 color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
 }
 .btn-primary:hover {
-  filter: brightness(1.12);
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 0 transparent;
 }
 .btn-primary:disabled {
   opacity: 0.6;
+}
+/* Black-on-yellow variant, for buttons sitting on an accent panel. */
+.btn-inverse {
+  background: var(--black);
+  color: var(--accent);
+  box-shadow: 4px 4px 0 0 rgb(0 0 0 / 0.25);
+}
+.btn-inverse:hover {
+  box-shadow: 6px 6px 0 0 rgb(0 0 0 / 0.3);
 }
 .btn-secondary {
   display: inline-flex;
@@ -142,34 +209,47 @@ body {
   gap: 0.5rem;
   border: 1px solid var(--line);
   color: var(--foreground);
-  padding: 0.7rem 1.25rem;
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
+  padding: 0.75rem 1.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   border-radius: 3px;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 .btn-secondary:hover {
-  border-color: var(--accent-2);
-  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Pixel-fused shapes: an N×M grid of cells, filled by a pattern. */
+.pixel-cell {
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* Text-reveal helpers used by GSAP SplitText. */
+.split-mask .line {
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
 }
 
 /* Wallet picker (@near-wallet-selector/modal-ui), themed to match. */
 html body #near-wallet-selector-modal .dark-theme {
-  --backdrop-bg: rgb(2 5 12 / 0.7);
+  --backdrop-bg: rgb(0 0 0 / 0.78);
   --heading-color: var(--foreground);
   --text-color: var(--muted);
   --sidebar-border-color: var(--line);
   --selected-wallet-bg: var(--accent);
   --selected-wallet-bg-hover: var(--surface-2);
   --wallet-option-border-color: var(--line);
-  --wallet-option-bg-hover: color-mix(in srgb, var(--accent) 18%, transparent);
+  --wallet-option-bg-hover: color-mix(in srgb, var(--accent) 14%, transparent);
   --wallet-option-outline-color: var(--accent);
   --content-bg: var(--surface);
   --change-path-bg: var(--surface-2);
   --home-button-bg: var(--surface-2);
   --confirm-button-bg: var(--accent);
-  --confirm-button-bg-hover: #5aa0ff;
+  --confirm-button-bg-hover: #e4ff4d;
   --error: var(--danger);
   --close-button-bg-color: var(--surface-2);
   --close-button-fill-icon-color: var(--muted);
@@ -177,15 +257,15 @@ html body #near-wallet-selector-modal .dark-theme {
   --bottom-section: var(--background);
   --mobile-text: var(--muted);
   --connected-green: var(--clean);
-  --gradient-dark-icon: radial-gradient(124% 124% at 92% -25%, var(--deep) 0%, var(--surface-2) 100%);
+  --gradient-dark-icon: var(--gradient);
   --get-wallet-option-bg-color: var(--surface-2);
-  --get-wallet-option-bg-color-hover: color-mix(in srgb, var(--accent) 18%, transparent);
+  --get-wallet-option-bg-color-hover: color-mix(in srgb, var(--accent) 14%, transparent);
   --get-wallet-option-border-color: var(--line);
   --get-wallet-outline-color: var(--accent);
-  --secondary-button-bg-color: color-mix(in srgb, var(--accent) 16%, transparent);
+  --secondary-button-bg-color: color-mix(in srgb, var(--accent) 12%, transparent);
   --secondary-button-border-color: var(--accent);
   --secondary-button-text-color: var(--foreground);
-  --what-wallet-icon-color: var(--accent-2);
+  --what-wallet-icon-color: var(--accent);
   --option-wallet-bg-color: var(--surface-2);
   --option-single-wallet-bg-color: var(--background);
 }
@@ -193,15 +273,22 @@ html body #near-wallet-selector-modal .nws-modal {
   border: 1px solid var(--line);
   border-radius: 6px;
 }
+html body #near-wallet-selector-modal .dark-theme .nws-modal .modal-right .confirm-button,
+html body #near-wallet-selector-modal .dark-theme .nws-modal .selected-wallet {
+  color: var(--accent-ink);
+}
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
+  .news-ticker-track,
+  .marquee-track {
+    animation: none !important;
+  }
   *,
   *::before,
   *::after {
-    animation: none !important;
     transition: none !important;
   }
 }

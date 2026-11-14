@@ -115,7 +115,7 @@ class Fill:
 
 def _paper_body(origin: str, dest: str, amount_units: str) -> dict:
     account = settings.paper_quote_account
-    return {
+    body = {
         "dry": True,
         "originAsset": origin,
         "destinationAsset": dest,
@@ -126,6 +126,10 @@ def _paper_body(origin: str, dest: str, amount_units: str) -> dict:
         "refundTo": account,
         "refundType": "INTENTS",
     }
+    # Confidential dry quotes need a partner JWT; without it keep public pricing.
+    if settings.oneclick_jwt:
+        body["confidentiality"] = "basic"
+    return body
 
 
 def _slippage_bps(price: float, ref: float, buying: bool) -> float:

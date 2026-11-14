@@ -79,7 +79,7 @@ export function CheckAnyWallet() {
           placeholder="account.near"
           aria-label="NEAR mainnet account"
         />
-        <button className="rounded-lg bg-accent px-4 py-2 font-medium text-white disabled:opacity-50 dark:text-black" disabled={loading}>
+        <button className="rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink disabled:opacity-50" disabled={loading}>
           {loading ? "Tracing…" : "Trace"}
         </button>
       </form>

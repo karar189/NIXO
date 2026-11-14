@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     ]
     http_timeout_seconds: float = 6.0
 
-    # NEAR Intents 1Click API. A JWT is optional; without it 1Click adds a fee.
+    # NEAR Intents 1Click API. JWT optional for public quotes (1Click may add a fee).
+    # Required for confidentiality basic/advanced (Confidential Intents).
     oneclick_url: str = "https://1click.chaindefuser.com"
     oneclick_jwt: str | None = None
     # Recipient used on dry-run (paper) quotes. Dry quotes never move funds.
