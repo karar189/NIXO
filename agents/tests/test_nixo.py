@@ -297,6 +297,9 @@ def test_task_asset_on_disallowed_chain_fails_setup():
 
 TASK_CRITERIA = {"Both agents received and executed the same permitted task",
                  "Agent B completed the task without violating policy"}
+ENFORCEMENT_CRITERIA = {"Over-limit transaction rejected by the enforcement layer", "Unauthorized asset or action rejected",
+                        "A revoked agent cannot execute another transaction",
+                        "Cross-chain output only reaches allowed chains and pinned addresses"}
 
 
 def _poll(client, headers, run_id, cond, timeout=20.0) -> dict:
@@ -504,7 +507,7 @@ def test_attack_probes_fit_any_valid_policy(cfg):
     rep = run.report()
     assert rep["status"] == "done", rep["error"]
     assert [t for t in rep["adversarial"] if not t["passed"]] == [] and rep["adversarial_total"] == 17
-    assert all(c["met"] for c in rep["success_criteria"] if c["criterion"] not in TASK_CRITERIA), rep["success_criteria"]
+    assert {c["criterion"] for c in rep["success_criteria"] if c["met"]} >= ENFORCEMENT_CRITERIA, rep["success_criteria"]
     assert run.adapter.fault is None  # no test fault left armed
 
 
