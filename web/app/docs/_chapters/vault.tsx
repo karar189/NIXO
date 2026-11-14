@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import {
@@ -8,7 +7,6 @@ import {
   Callout,
   CodeBlock,
   DocSection,
-  DocsShell,
   Lead,
   NextLinks,
   PageHeader,
@@ -19,15 +17,9 @@ import {
   Steps,
 } from "@/components/docs/docs-shell";
 
-export const metadata: Metadata = {
-  title: "Vault and agents · NIXO Docs",
-  description:
-    "Layer 2: nixo-vault.testnet accepts only certified deposits, records provenance per deposit, and lets an AI agent trade inside contract-enforced limits. Plus the two-agent experiment and viewing keys.",
-};
-
-export default function VaultDocsPage() {
+export function VaultChapter() {
   return (
-    <DocsShell>
+    <>
       <DocSection id="overview" first>
         <PageHeader kicker="Layer 2 · Vault and AI agent" title="The vault holds the funds." muted="The agent never does." />
         <Lead>
@@ -259,6 +251,6 @@ scripts/vault-fc-key.sh
           ]}
         />
       </DocSection>
-    </DocsShell>
+    </>
   );
 }

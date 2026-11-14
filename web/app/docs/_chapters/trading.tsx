@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import {
@@ -7,7 +6,6 @@ import {
   C,
   Callout,
   DocSection,
-  DocsShell,
   Lead,
   NextLinks,
   PageHeader,
@@ -18,15 +16,9 @@ import {
   Steps,
 } from "@/components/docs/docs-shell";
 
-export const metadata: Metadata = {
-  title: "Trading desk · NIXO Docs",
-  description:
-    "Wallet-signed spot swaps through Confidential Intents (1Click, private-shard settlement), a paper desk priced with real dry quotes, and LLM-planned trading agents.",
-};
-
-export default function TradingDocsPage() {
+export function TradingChapter() {
   return (
-    <DocsShell>
+    <>
       <DocSection id="overview" first>
         <PageHeader kicker="Desk · /dashboard/trade" title="Trade where the certificate lives." />
         <Lead>
@@ -157,6 +149,6 @@ export default function TradingDocsPage() {
           ]}
         />
       </DocSection>
-    </DocsShell>
+    </>
   );
 }

@@ -1,11 +1,9 @@
 import { Fragment } from "react";
-import type { Metadata } from "next";
 import {
   Bullets,
   C,
   Callout,
   DocSection,
-  DocsShell,
   Lead,
   NextLinks,
   PageHeader,
@@ -14,15 +12,9 @@ import {
   StatusPill,
 } from "@/components/docs/docs-shell";
 
-export const metadata: Metadata = {
-  title: "Status and limits · NIXO Docs",
-  description:
-    "What is live on NEAR testnet, what is a labelled fixture or mock, what NIXO trusts, what it does not claim, and what comes next.",
-};
-
-export default function StatusDocsPage() {
+export function StatusChapter() {
   return (
-    <DocsShell>
+    <>
       <DocSection id="real" first>
         <PageHeader kicker="Status and limits" title="What is real," muted="what is labelled, what is later." />
         <Lead>
@@ -114,6 +106,6 @@ export default function StatusDocsPage() {
           ]}
         />
       </DocSection>
-    </DocsShell>
+    </>
   );
 }

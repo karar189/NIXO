@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import {
@@ -8,7 +7,6 @@ import {
   Callout,
   CodeBlock,
   DocSection,
-  DocsShell,
   Lead,
   NextLinks,
   PageHeader,
@@ -19,15 +17,9 @@ import {
   Steps,
 } from "@/components/docs/docs-shell";
 
-export const metadata: Metadata = {
-  title: "Clean-funds passport · NIXO Docs",
-  description:
-    "Layer 1: a pinned Rust checker in an OutLayer TEE traces fund history and writes a short certificate to nixo.testnet. is_clean(account) is the public gate.",
-};
-
-export default function TracerDocsPage() {
+export function TracerChapter() {
   return (
-    <DocsShell>
+    <>
       <DocSection id="status" first>
         <PageHeader kicker="Layer 1 · Fund tracer" title="A verdict on-chain." muted="The history stays in the enclave." />
         <Lead>
@@ -345,6 +337,6 @@ printf '{"account":"nixo-alice.testnet"}' | wasmtime run target/wasm32-wasip2/re
           ]}
         />
       </DocSection>
-    </DocsShell>
+    </>
   );
 }

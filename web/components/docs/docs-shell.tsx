@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { ArrowRight, ArrowUpRight, BookOpen } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
-import { NIXO_EXPLORER, REPO_URL } from "./links";
+import { NIXO_EXPLORER, REPO_URL, chapterHref, docsHref, sectionAnchor } from "./links";
 import { useActiveDocsSection } from "./use-active-docs-section";
 
-export type DocsNavChild = { href: string; label: string };
+export type DocsNavChild = { id: string; label: string };
 
+/** One chapter of the single docs page. `chapter` prefixes its section ids; the intro uses "". */
 export type DocsNavItem = {
-  href: string;
+  chapter: string;
   label: string;
   children: readonly DocsNavChild[];
 };
@@ -21,21 +21,21 @@ export type DocsNavSection = {
   items: readonly DocsNavItem[];
 };
 
-/** Single source of truth for the sidebar, the mobile chips and each page's "On this page" outline. */
+/** Single source of truth for the chapter order, the sidebar, the mobile chips and the "On this page" outline. */
 export const DOCS_NAV: readonly DocsNavSection[] = [
   {
     label: "Start here",
     items: [
       {
-        href: "/docs",
+        chapter: "",
         label: "What NIXO is",
         children: [
-          { href: "#overview", label: "Overview" },
-          { href: "#problem", label: "The problem" },
-          { href: "#layers", label: "Three layers" },
-          { href: "#surfaces", label: "Product surfaces" },
-          { href: "#audience", label: "Who it is for" },
-          { href: "#tour", label: "90-second tour" },
+          { id: "overview", label: "Overview" },
+          { id: "problem", label: "The problem" },
+          { id: "layers", label: "Three layers" },
+          { id: "surfaces", label: "Product surfaces" },
+          { id: "audience", label: "Who it is for" },
+          { id: "tour", label: "90-second tour" },
         ],
       },
     ],
@@ -44,22 +44,22 @@ export const DOCS_NAV: readonly DocsNavSection[] = [
     label: "Layer 1",
     items: [
       {
-        href: "/docs/tracer",
+        chapter: "tracer",
         label: "Clean-funds passport",
         children: [
-          { href: "#status", label: "Deployment status" },
-          { href: "#what", label: "What this is" },
-          { href: "#lifecycle", label: "Certificate lifecycle" },
-          { href: "#checker", label: "The checker" },
-          { href: "#verdicts", label: "Verdicts and reasons" },
-          { href: "#trace", label: "Multi-hop trace" },
-          { href: "#lists", label: "Sanctions and hacker lists" },
-          { href: "#history", label: "History sources" },
-          { href: "#certificate", label: "Certificate fields" },
-          { href: "#governance", label: "Hash pinning and revocation" },
-          { href: "#kani", label: "Formal verification" },
-          { href: "#visibility", label: "What is hidden from whom" },
-          { href: "#preview", label: "Check any wallet" },
+          { id: "status", label: "Deployment status" },
+          { id: "what", label: "What this is" },
+          { id: "lifecycle", label: "Certificate lifecycle" },
+          { id: "checker", label: "The checker" },
+          { id: "verdicts", label: "Verdicts and reasons" },
+          { id: "trace", label: "Multi-hop trace" },
+          { id: "lists", label: "Sanctions and hacker lists" },
+          { id: "history", label: "History sources" },
+          { id: "certificate", label: "Certificate fields" },
+          { id: "governance", label: "Hash pinning and revocation" },
+          { id: "kani", label: "Formal verification" },
+          { id: "visibility", label: "What is hidden from whom" },
+          { id: "preview", label: "Check any wallet" },
         ],
       },
     ],
@@ -68,19 +68,19 @@ export const DOCS_NAV: readonly DocsNavSection[] = [
     label: "Layer 2",
     items: [
       {
-        href: "/docs/vault",
+        chapter: "vault",
         label: "Vault and agents",
         children: [
-          { href: "#overview", label: "What the vault is" },
-          { href: "#deposit", label: "Deposit gate" },
-          { href: "#assign", label: "Assign an agent" },
-          { href: "#execute", label: "Execute and limits" },
-          { href: "#exit", label: "Revoke and withdraw" },
-          { href: "#fc-key", label: "Function-call key" },
-          { href: "#experiment", label: "Two-agent experiment" },
-          { href: "#suite", label: "Adversarial suite" },
-          { href: "#viewing", label: "Viewing keys" },
-          { href: "#ui", label: "Dashboard" },
+          { id: "overview", label: "What the vault is" },
+          { id: "deposit", label: "Deposit gate" },
+          { id: "assign", label: "Assign an agent" },
+          { id: "execute", label: "Execute and limits" },
+          { id: "exit", label: "Revoke and withdraw" },
+          { id: "fc-key", label: "Function-call key" },
+          { id: "experiment", label: "Two-agent experiment" },
+          { id: "suite", label: "Adversarial suite" },
+          { id: "viewing", label: "Viewing keys" },
+          { id: "ui", label: "Dashboard" },
         ],
       },
     ],
@@ -89,15 +89,15 @@ export const DOCS_NAV: readonly DocsNavSection[] = [
     label: "Layer 3",
     items: [
       {
-        href: "/docs/solver",
+        chapter: "solver",
         label: "Solver gate",
         children: [
-          { href: "#overview", label: "What the gate is" },
-          { href: "#rules", label: "Fail-closed rules" },
-          { href: "#sdk", label: "checkIntent" },
-          { href: "#mock", label: "Mock solver" },
-          { href: "#try", label: "Try it" },
-          { href: "#limits", label: "What it is not" },
+          { id: "overview", label: "What the gate is" },
+          { id: "rules", label: "Fail-closed rules" },
+          { id: "sdk", label: "checkIntent" },
+          { id: "mock", label: "Mock solver" },
+          { id: "try", label: "Try it" },
+          { id: "limits", label: "What it is not" },
         ],
       },
     ],
@@ -106,26 +106,26 @@ export const DOCS_NAV: readonly DocsNavSection[] = [
     label: "Desk",
     items: [
       {
-        href: "/docs/trading",
+        chapter: "trading",
         label: "Trading desk",
         children: [
-          { href: "#overview", label: "What the desk is" },
-          { href: "#swap", label: "Confidential swaps" },
-          { href: "#flow", label: "Swap lifecycle" },
-          { href: "#paper", label: "Paper desk" },
-          { href: "#agents", label: "AI trading agents" },
-          { href: "#models", label: "Model providers" },
+          { id: "overview", label: "What the desk is" },
+          { id: "swap", label: "Confidential swaps" },
+          { id: "flow", label: "Swap lifecycle" },
+          { id: "paper", label: "Paper desk" },
+          { id: "agents", label: "AI trading agents" },
+          { id: "models", label: "Model providers" },
         ],
       },
       {
-        href: "/docs/private-ai",
+        chapter: "private-ai",
         label: "Private AI",
         children: [
-          { href: "#overview", label: "What it is" },
-          { href: "#explainer", label: "Certificate explainer" },
-          { href: "#attestation", label: "Attestation checks" },
-          { href: "#retention", label: "No retention" },
-          { href: "#try", label: "Try it" },
+          { id: "overview", label: "What it is" },
+          { id: "explainer", label: "Certificate explainer" },
+          { id: "attestation", label: "Attestation checks" },
+          { id: "retention", label: "No retention" },
+          { id: "try", label: "Try it" },
         ],
       },
     ],
@@ -134,59 +134,58 @@ export const DOCS_NAV: readonly DocsNavSection[] = [
     label: "Reference",
     items: [
       {
-        href: "/docs/developers",
+        chapter: "developers",
         label: "Developer reference",
         children: [
-          { href: "#contracts", label: "Deployed contracts" },
-          { href: "#nixo-methods", label: "nixo.testnet methods" },
-          { href: "#vault-methods", label: "Vault methods" },
-          { href: "#events", label: "Events" },
-          { href: "#web-api", label: "Web API routes" },
-          { href: "#agents-api", label: "Agents API" },
-          { href: "#sdk", label: "TypeScript SDKs" },
-          { href: "#run", label: "Run locally" },
-          { href: "#env", label: "Environment" },
-          { href: "#tests", label: "Tests and CI" },
+          { id: "contracts", label: "Deployed contracts" },
+          { id: "nixo-methods", label: "nixo.testnet methods" },
+          { id: "vault-methods", label: "Vault methods" },
+          { id: "events", label: "Events" },
+          { id: "web-api", label: "Web API routes" },
+          { id: "agents-api", label: "Agents API" },
+          { id: "sdk", label: "TypeScript SDKs" },
+          { id: "run", label: "Run locally" },
+          { id: "env", label: "Environment" },
+          { id: "tests", label: "Tests and CI" },
         ],
       },
       {
-        href: "/docs/status",
+        chapter: "status",
         label: "Status and limits",
         children: [
-          { href: "#real", label: "Real vs mocked" },
-          { href: "#trust", label: "Trust assumptions" },
-          { href: "#not", label: "What NIXO does not claim" },
-          { href: "#related", label: "Related work" },
-          { href: "#roadmap", label: "Roadmap" },
+          { id: "real", label: "Real vs mocked" },
+          { id: "trust", label: "Trust assumptions" },
+          { id: "not", label: "What NIXO does not claim" },
+          { id: "related", label: "Related work" },
+          { id: "roadmap", label: "Roadmap" },
         ],
       },
     ],
   },
 ];
 
-function isActive(pathname: string, href: string) {
-  if (href === "/docs") return pathname === "/docs";
-  return pathname === href || pathname.startsWith(`${href}/`);
+const CHAPTERS = DOCS_NAV.flatMap((section) => section.items);
+
+function sectionHref(chapter: string, id: string) {
+  return `#${sectionAnchor(chapter, id)}`;
 }
 
-function pageToc(pathname: string): readonly DocsNavChild[] {
-  for (const section of DOCS_NAV) {
-    for (const item of section.items) {
-      if (isActive(pathname, item.href)) return item.children;
-    }
-  }
-  return [];
+/** Every section on the page, in reading order, for the scroll-spy. */
+const ALL_SECTION_HREFS = CHAPTERS.flatMap((item) => item.children.map((child) => sectionHref(item.chapter, child.id)));
+
+function chapterOf(href: string): DocsNavItem {
+  return CHAPTERS.find((item) => item.children.some((child) => sectionHref(item.chapter, child.id) === href)) ?? CHAPTERS[0];
 }
 
 export function DocsShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname() ?? "/docs";
-  const headings = pageToc(pathname);
-  const activeSection = useActiveDocsSection(headings.map((item) => item.href));
+  const activeSection = useActiveDocsSection(ALL_SECTION_HREFS);
+  const activeChapter = chapterOf(activeSection);
 
+  // Keep the highlighted entry visible in both scrolling side rails.
   useEffect(() => {
     if (!activeSection) return;
-    const el = document.querySelector(`[data-docs-outline="${CSS.escape(activeSection)}"]`);
-    el?.scrollIntoView({ block: "nearest" });
+    const selector = `[data-docs-outline="${CSS.escape(activeSection)}"], [data-docs-nav="${CSS.escape(activeSection)}"]`;
+    document.querySelectorAll(selector).forEach((el) => el.scrollIntoView({ block: "nearest" }));
   }, [activeSection]);
 
   return (
@@ -234,12 +233,12 @@ export function DocsShell({ children }: { children: ReactNode }) {
                   <p className="kicker mb-3">{section.label}</p>
                   <div className="space-y-3">
                     {section.items.map((item) => {
-                      const active = isActive(pathname, item.href);
+                      const active = item.chapter === activeChapter.chapter;
                       return (
-                        <div key={item.href}>
-                          <Link
-                            href={item.href}
-                            aria-current={active ? "page" : undefined}
+                        <div key={item.chapter || "intro"}>
+                          <a
+                            href={chapterHref(item.chapter)}
+                            aria-current={active ? "true" : undefined}
                             className={`block border-l-2 py-1.5 pl-3 text-[13px] transition-colors ${
                               active
                                 ? "border-accent font-medium text-foreground"
@@ -247,15 +246,17 @@ export function DocsShell({ children }: { children: ReactNode }) {
                             }`}
                           >
                             {item.label}
-                          </Link>
+                          </a>
                           {active && (
                             <div className="mt-0.5 space-y-0.5 border-l border-line pl-3">
                               {item.children.map((child) => {
-                                const sectionActive = child.href === activeSection;
+                                const href = sectionHref(item.chapter, child.id);
+                                const sectionActive = href === activeSection;
                                 return (
                                   <a
-                                    key={`${item.href}${child.href}`}
-                                    href={child.href}
+                                    key={href}
+                                    href={href}
+                                    data-docs-nav={href}
                                     aria-current={sectionActive ? "location" : undefined}
                                     className={`block py-1 pl-3 text-[12px] leading-4 transition-colors ${
                                       sectionActive ? "font-medium text-accent" : "text-muted hover:text-foreground"
@@ -300,47 +301,49 @@ export function DocsShell({ children }: { children: ReactNode }) {
 
         <main className="min-w-0 px-4 py-12 sm:px-8 sm:py-16 lg:px-12 xl:px-14">
           <div className="mb-10 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-            {DOCS_NAV.flatMap((section) =>
-              section.items.flatMap((item) => [
-                <Link
-                  key={item.href}
-                  href={item.href}
+            {CHAPTERS.flatMap((item) => {
+              const active = item.chapter === activeChapter.chapter;
+              return [
+                <a
+                  key={item.chapter || "intro"}
+                  href={chapterHref(item.chapter)}
                   className={`shrink-0 border px-3 py-2 text-xs ${
-                    isActive(pathname, item.href)
-                      ? "border-accent bg-accent/10 text-foreground"
-                      : "border-line bg-surface text-muted"
+                    active ? "border-accent bg-accent/10 text-foreground" : "border-line bg-surface text-muted"
                   }`}
                 >
                   {item.label}
-                </Link>,
-                ...(isActive(pathname, item.href)
-                  ? item.children.map((child) => (
+                </a>,
+                ...(active
+                  ? item.children.map((child) => {
+                      const href = sectionHref(item.chapter, child.id);
+                      return (
                       <a
-                        key={`${item.href}${child.href}`}
-                        href={child.href}
-                        aria-current={child.href === activeSection ? "location" : undefined}
+                        key={href}
+                        href={href}
+                        aria-current={href === activeSection ? "location" : undefined}
                         className={`shrink-0 border px-3 py-2 text-xs ${
-                          child.href === activeSection
+                          href === activeSection
                             ? "border-accent/60 bg-surface font-medium text-accent"
                             : "border-line bg-black text-muted"
                         }`}
                       >
                         {child.label}
                       </a>
-                    ))
+                      );
+                    })
                   : []),
-              ]),
-            )}
+              ];
+            })}
           </div>
           {children}
           <footer className="mt-20 flex flex-col gap-4 border-t border-line py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
             <span className="kicker">NIXO · NEAR testnet · {new Date().getFullYear()}</span>
             <div className="flex flex-wrap gap-5">
               <Link href="/" className="hover:text-accent">Home</Link>
-              <Link href="/docs/tracer" className="hover:text-accent">Passport</Link>
-              <Link href="/docs/vault" className="hover:text-accent">Vault</Link>
-              <Link href="/docs/solver" className="hover:text-accent">Solver</Link>
-              <Link href="/docs/developers" className="hover:text-accent">Reference</Link>
+              <a href="#tracer" className="hover:text-accent">Passport</a>
+              <a href="#vault" className="hover:text-accent">Vault</a>
+              <a href="#solver" className="hover:text-accent">Solver</a>
+              <a href="#developers" className="hover:text-accent">Reference</a>
               <Link href="/verify" className="hover:text-accent">Exchange view</Link>
             </div>
           </footer>
@@ -349,14 +352,16 @@ export function DocsShell({ children }: { children: ReactNode }) {
         <aside className="hidden xl:block">
           <div className="sticky top-16 h-[calc(100svh-4rem)] overflow-y-auto px-7 py-10">
             <p className="kicker">On this page</p>
-            <nav className="mt-4 space-y-1 text-xs" aria-label="On this page">
-              {headings.map((item) => {
-                const sectionActive = item.href === activeSection;
+            <p className="mt-4 text-xs font-semibold text-foreground">{activeChapter.label}</p>
+            <nav className="mt-3 space-y-1 text-xs" aria-label="On this page">
+              {activeChapter.children.map((item) => {
+                const href = sectionHref(activeChapter.chapter, item.id);
+                const sectionActive = href === activeSection;
                 return (
                   <a
-                    key={item.href}
-                    href={item.href}
-                    data-docs-outline={item.href}
+                    key={href}
+                    href={href}
+                    data-docs-outline={href}
                     aria-current={sectionActive ? "location" : undefined}
                     className={`block border-l-2 py-1 pl-3 leading-4 transition-colors ${
                       sectionActive
@@ -378,7 +383,28 @@ export function DocsShell({ children }: { children: ReactNode }) {
 
 // ---------- building blocks ----------
 
-/** Page title block: kicker, display headline, lead paragraph(s), optional actions. */
+const ChapterContext = createContext({ chapter: "", first: true });
+
+/**
+ * One chapter of the continuous docs page. Prefixes the ids of the sections inside it and draws the divider
+ * that separates it from the chapter before, so the reader scrolls straight on instead of hitting a page end.
+ */
+export function DocsChapter({ chapter, first = false, children }: { chapter: string; first?: boolean; children: ReactNode }) {
+  return (
+    <ChapterContext value={{ chapter, first }}>
+      {first ? (
+        children
+      ) : (
+        <div id={chapter} className="relative mt-32 scroll-mt-28 border-t border-line pt-24">
+          <span className="absolute -top-px left-0 h-px w-24 bg-accent" aria-hidden />
+          {children}
+        </div>
+      )}
+    </ChapterContext>
+  );
+}
+
+/** Chapter title block: kicker, display headline, lead paragraph(s), optional actions. Only the first chapter's is the h1. */
 export function PageHeader({
   kicker,
   title,
@@ -390,10 +416,11 @@ export function PageHeader({
   muted?: string;
   children?: ReactNode;
 }) {
+  const Heading = useContext(ChapterContext).first ? "h1" : "h2";
   return (
     <>
       <p className="kicker !text-accent">{kicker}</p>
-      <h1 className="display mt-4 max-w-3xl text-[clamp(2.4rem,6vw,4.4rem)]">
+      <Heading className="display mt-4 max-w-3xl text-[clamp(2.4rem,6vw,4.4rem)]">
         {title}
         {muted && (
           <>
@@ -401,16 +428,17 @@ export function PageHeader({
             <span className="text-muted">{muted}</span>
           </>
         )}
-      </h1>
+      </Heading>
       {children}
     </>
   );
 }
 
-/** Top-level section with the anchor id the outline links to. */
+/** Top-level section with the anchor id the outline links to (prefixed by its chapter). */
 export function DocSection({ id, first = false, children }: { id: string; first?: boolean; children: ReactNode }) {
+  const { chapter } = useContext(ChapterContext);
   return (
-    <section id={id} className={`scroll-mt-28 ${first ? "" : "mt-20 border-t border-line pt-16"}`}>
+    <section id={sectionAnchor(chapter, id)} className={`scroll-mt-28 ${first ? "" : "mt-20 border-t border-line pt-16"}`}>
       {children}
     </section>
   );
@@ -554,15 +582,22 @@ export function Callout({ title, children }: { title: string; children: ReactNod
   );
 }
 
-/** Small row of "next page" links at the end of a page. */
+/** Small row of cross-reference links at the end of a chapter. `/docs/...` hrefs become in-page anchors. */
 export function NextLinks({ links }: { links: readonly { href: string; label: string }[] }) {
   return (
     <div className="mt-10 flex flex-wrap gap-5 text-xs font-semibold">
-      {links.map((l) => (
-        <Link key={l.href} href={l.href} className="text-accent hover:underline">
-          {l.label} →
-        </Link>
-      ))}
+      {links.map((l) => {
+        const href = docsHref(l.href);
+        return href.startsWith("#") ? (
+          <a key={l.href} href={href} className="text-accent hover:underline">
+            {l.label} →
+          </a>
+        ) : (
+          <Link key={l.href} href={href} className="text-accent hover:underline">
+            {l.label} →
+          </Link>
+        );
+      })}
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import {
@@ -8,7 +7,6 @@ import {
   Callout,
   CodeBlock,
   DocSection,
-  DocsShell,
   Lead,
   NextLinks,
   PageHeader,
@@ -17,15 +15,9 @@ import {
   Steps,
 } from "@/components/docs/docs-shell";
 
-export const metadata: Metadata = {
-  title: "Solver gate · NIXO Docs",
-  description:
-    "Layer 3: fail-closed middleware NEAR Intents solvers and routers call before a fill. Only a currently valid Clean certificate is allowed.",
-};
-
-export default function SolverDocsPage() {
+export function SolverChapter() {
   return (
-    <DocsShell>
+    <>
       <DocSection id="overview" first>
         <PageHeader kicker="Layer 3 · Solver infrastructure" title="Refuse the intent" muted="before you fill it." />
         <Lead>
@@ -133,6 +125,6 @@ await fill(intent);`}</CodeBlock>
           ]}
         />
       </DocSection>
-    </DocsShell>
+    </>
   );
 }

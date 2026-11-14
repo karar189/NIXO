@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import {
@@ -8,7 +7,6 @@ import {
   Callout,
   CodeBlock,
   DocSection,
-  DocsShell,
   Lead,
   NextLinks,
   PageHeader,
@@ -18,15 +16,9 @@ import {
   Steps,
 } from "@/components/docs/docs-shell";
 
-export const metadata: Metadata = {
-  title: "Private AI · NEAR AI Cloud · NIXO Docs",
-  description:
-    "A TEE-hosted model on NEAR AI Cloud explains public certificates and sample documents. Fresh-nonce attestation checks, no server-side retention.",
-};
-
-export default function PrivateAiDocsPage() {
+export function PrivateAiChapter() {
   return (
-    <DocsShell>
+    <>
       <DocSection id="overview" first>
         <PageHeader kicker="Private AI · NEAR AI Cloud" title="Explain the verdict." muted="Keep nothing." />
         <Lead>
@@ -117,6 +109,6 @@ NEARAI_API_KEY=… .venv-nearai/bin/python scripts/nearai_smoke.py`}</CodeBlock>
           ]}
         />
       </DocSection>
-    </DocsShell>
+    </>
   );
 }

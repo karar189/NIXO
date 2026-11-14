@@ -1,10 +1,8 @@
-import type { Metadata } from "next";
 import {
   C,
   Callout,
   CodeBlock,
   DocSection,
-  DocsShell,
   Lead,
   NextLinks,
   PageHeader,
@@ -13,15 +11,9 @@ import {
   SpecTable,
 } from "@/components/docs/docs-shell";
 
-export const metadata: Metadata = {
-  title: "Developer reference · NIXO Docs",
-  description:
-    "Contract methods and events for nixo.testnet and nixo-vault.testnet, the web and agents HTTP APIs, TypeScript SDKs, and how to run NIXO locally.",
-};
-
-export default function DevelopersDocsPage() {
+export function DevelopersChapter() {
   return (
-    <DocsShell>
+    <>
       <DocSection id="contracts" first>
         <PageHeader kicker="Reference" title="Everything you can call." />
         <Lead>
@@ -213,6 +205,6 @@ pnpm dev                  # web :3000 · agents :8000 · backend :4000`}</CodeBl
         </Prose>
         <NextLinks links={[{ href: "/docs/status", label: "Status and limits" }]} />
       </DocSection>
-    </DocsShell>
+    </>
   );
 }
