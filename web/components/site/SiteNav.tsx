@@ -11,12 +11,12 @@ const LINKS = [
 
 export function SiteNav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-black/70 backdrop-blur-md">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6">
-        <Link href="/" aria-label="NIXO home" className="text-foreground">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-3 sm:px-6 sm:pt-4">
+      <nav className="pointer-events-auto flex h-12 w-full max-w-7xl items-center justify-between gap-4 border border-line/80 bg-black/55 px-4 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:h-14 sm:gap-6 sm:px-5 rounded-[14px]">
+        <Link href="/" aria-label="NIXO home" className="shrink-0 text-foreground">
           <Logo />
         </Link>
-        <ul className="hidden items-center gap-8 md:flex">
+        <ul className="hidden items-center gap-6 md:flex">
           {LINKS.map((l) => (
             <li key={l.href}>
               <Link href={l.href} className="kicker transition-colors hover:text-accent">
@@ -25,7 +25,9 @@ export function SiteNav() {
             </li>
           ))}
         </ul>
-        <ConnectButton />
+        <div className="shrink-0">
+          <ConnectButton />
+        </div>
       </nav>
     </header>
   );

@@ -4,7 +4,7 @@
 import * as React from "react"
 import { useEffect, useRef } from "react"
 
-const MAX_DPR = 2
+const MAX_DPR = 1.5
 const NAME = "HalftoneBloom"
 
 // Field, frozen (rule 11b): fold count and overall exposure of the ribbons.
@@ -415,8 +415,18 @@ export default function HalftoneBloom(props: HalftoneBloomProps) {
         let last = -1
         let clock = 0
 
+        // Only render while on screen: the field pass is expensive and the hero
+        // scrolls away quickly.
+        let visible = true
+        const io = new IntersectionObserver(([entry]) => {
+            visible = entry.isIntersecting
+            if (!visible) last = -1
+        })
+        io.observe(root)
+
         const render = (now: number) => {
             raf = requestAnimationFrame(render)
+            if (!visible) return
             const dt = last < 0 ? 0 : clampN((now - last) / 1000, 0, 0.05)
             last = now
             const v = vRef.current
@@ -485,6 +495,7 @@ export default function HalftoneBloom(props: HalftoneBloomProps) {
         raf = requestAnimationFrame(render)
         return () => {
             cancelAnimationFrame(raf)
+            io.disconnect()
             pointer.dispose()
             target.dispose()
             gl.deleteVertexArray(vao)

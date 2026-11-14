@@ -33,12 +33,10 @@ export function PixelShape({
   );
 }
 
-/* Patterns. Shapes are drawn so they "fuse" like the reference: a big body with
-   stray cells breaking off the edges. */
+/* Patterns. Shapes fuse into one solid body — no detached floating cells. */
 
 export const BLOB_WIDE = [
-  ".....#..........",
-  ".....#......#...",
+  ".....##.........",
   "...#######......",
   "...#########....",
   ".##############.",
@@ -46,8 +44,8 @@ export const BLOB_WIDE = [
   "################",
   ".##############.",
   "...##########...",
-  "...#######.##...",
-  ".....#..........",
+  "...#########....",
+  "....#######.....",
 ];
 
 export const BLOB_TALL = [
