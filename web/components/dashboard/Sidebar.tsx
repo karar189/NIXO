@@ -11,13 +11,16 @@ type NavItem = { href: string; label: string; index: string; soon?: boolean };
 const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", index: "01" },
   { href: "/dashboard/trade", label: "Swap", index: "02" },
-  { href: "/dashboard/privacy", label: "Privacy", index: "03" },
-  { href: "/dashboard/agents", label: "Agents", index: "04" },
-  { href: "/dashboard/keys", label: "Viewing keys", index: "05", soon: true },
+  { href: "/dashboard/markets", label: "Markets", index: "03" },
+  { href: "/dashboard/news", label: "News", index: "04" },
+  { href: "/dashboard/privacy", label: "Privacy", index: "05" },
+  { href: "/dashboard/agents", label: "Agents & vaults", index: "06" },
+  { href: "/dashboard/keys", label: "Viewing keys", index: "07", soon: true },
 ];
 
 const ACCOUNT_NAV: NavItem[] = [
   { href: "/verify", label: "Exchange view", index: "EX" },
+  { href: "/docs", label: "Docs", index: "DO" },
   { href: "/dashboard/settings", label: "Settings", index: "ST" },
   { href: "/", label: "Exit desk", index: "←" },
 ];

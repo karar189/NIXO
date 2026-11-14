@@ -16,15 +16,18 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
   const { accountId, disconnect, network, walletName } = useWallet();
   const router = useRouter();
   const pathname = usePathname();
-  const title =
-    {
-      "/dashboard/trade": "Swap",
-      "/dashboard/agents": "Agents & vaults",
-      "/dashboard/settings": "Settings",
-      "/dashboard/privacy": "Privacy",
-      "/dashboard/solver": "Privacy",
-      "/dashboard/clean-funds": "Privacy",
-    }[pathname] ?? "Overview";
+  const title = pathname.startsWith("/dashboard/markets")
+    ? "Markets"
+    : pathname.startsWith("/dashboard/news")
+      ? "News"
+      : ({
+          "/dashboard/trade": "Swap",
+          "/dashboard/agents": "Agents & vaults",
+          "/dashboard/settings": "Settings",
+          "/dashboard/privacy": "Privacy",
+          "/dashboard/solver": "Privacy",
+          "/dashboard/clean-funds": "Privacy",
+        }[pathname] ?? "Overview");
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
