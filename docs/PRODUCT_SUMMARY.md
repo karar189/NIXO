@@ -6,22 +6,32 @@
 
 ## Current status (checked now)
 
-**Verdict:** Layer 1 (tracer) is demo-ready on testnet with fixture histories; Layer 2 (vault + agent) has a working **off-chain** two-agent experiment and UI; Layer 3 (solver) is not started. The PRD’s critical remaining work is live history inside the enclave, an on-chain vault wired to `is_clean`, one viewing-key decrypt path, and a mock solver Alice/Mallory demo.
+**Verdict:** Layer 1 tracer logic is now **depth-6 / `taint_path`-real** in source and the newly built WASM (`0.2.0`); on-chain pin was **proposed** and is activating after the 5‑minute timelock. Certified histories are still **labelled fixtures** (Mallory = real mainnet trail replay); live NearBlocks fetch **inside** the enclave is not shipped yet. Layer 2 off-chain experiment works; Layer 3 not started.
+
+### Why Layer 1 was “partial” (and what changed)
+
+| Gap | Why it was true | Status now |
+|---|---|---|
+| Certified histories are fixtures | Enclave `load_history()` only reads WASM-compiled Alice/Mallory JSON — no `wasi:http` NearBlocks client yet | Still fixtures for certify; Mallory fixture **rewritten** from documented mainnet txs (not an empty placeholder) |
+| No live NearBlocks in enclave | Checker `Cargo.toml` has no HTTP client; OutLayer P2 + secrets not wired for indexer key | **Still open** (PRD §4.1); OutLayer project `nixo.testnet/nixo-checker` created for that next |
+| Pinned WASM `0.1.0` / `trace_depth: 1` / Mallory `list_hit` | Live pin was an older build; repo `mallory.json` was a placeholder so a rebuild would not match the pitch | **Local WASM `0.2.0`:** Alice `clean`, Mallory `rejected` / **`taint_path`**, **`hops: 4`**, **`trace_depth: 6`**. Hash `574b8182…2211` uploaded to FastFS; `set_checker_hash` proposed; apply after timelock then re-certify |
 
 | PRD layer | Status | What’s real | What’s not |
 |---|---|---|---|
-| **1 — Fund tracer** | **Partial / demo-live** | `nixo.testnet` deployed; OutLayer TEE path; Alice Clean / Mallory Rejected certificates **valid now**; Kani proofs; `/verify` + clean-funds UI; mainnet hop preview outside TEE | Certified histories still **fixtures** (`history_source: "fixture"`); no live NearBlocks fetch in enclave; pinned WASM still `0.1.0` / `trace_depth: 1` / Mallory `list_hit` (source claims depth 6 / `taint_path`) |
-| **2 — Vault + AI agent** | **Off-chain MVP live** | `/dashboard/agents` two-agent experiment; Python vault with per-deposit provenance, caps, revoke, adversarial tests, audit; multi-provider LLM incl. NEAR AI; paper/live Intents trading desk | Vault is **in-process**, not a NEAR contract; provenance is `stub_verified` (not `is_clean`); no encrypted log / viewing-key decrypt; TEE strategy still labelled “build” on landing |
-| **3 — Solver infrastructure** | **Not started** | Landing copy mentions the gate | No mock solver, no solver SDK/middleware, no Alice-fill / Mallory-refuse demo |
+| **1 — Fund tracer** | **Live fetch coded (0.3.0); pin/certs lag deploy** | Checker `0.3.0` fetches NearBlocks v3 inside the enclave (`live.rs` + wasi:http); fixtures only if `NIXO_OFFLINE=1`; terminals; network match; fail-closed on fetch errors. Offline wasmtime: Alice clean / Mallory `taint_path` depth 6 | On-chain pin still older build until rebuild+upload+apply+re-certify. OutLayer TEE runs were failing earlier; inject `NEARBLOCKS_API_KEY` as OutLayer secret before relying on live certify |
+| **2 — Vault + AI agent** | **Off-chain MVP live** | `/dashboard/agents` experiment; caps, revoke, adversarial suite | On-chain vault + `is_clean` gate; viewing keys |
+| **3 — Solver infrastructure** | **Not started** | Copy only | Mock solver / SDK |
 
-**Live contract snapshot (14 Nov 2026):**
+**Live contract snapshot (14 Nov 2026, evening):**
 
 - Contract: `nixo.testnet` · OutLayer: `outlayer.testnet` · owner: `nixo.testnet`
-- Pinned checker: `e0c79a99…bed6` · list snapshot `data-2026-10-29`
-- `nixo-alice.testnet` → `clean`, valid, `history_source: fixture`, `trace_depth: 1`
-- `nixo-mallory.testnet` → `rejected` / `list_hit`, valid, `history_source: fixture`, `trace_depth: 1`
+- **Active pin (applied):** `574b818291b253645db7d7d2f280494406391e4907e0d2180e05653ee6052211` (checker `0.2.0`, FastFS URL matching)
+- Contract redeployed with higher OutLayer limits (50B instructions / 256MB / 60s)
+- **Stored certificates still old** (`0.1.0` / depth 1 / Mallory `list_hit`): re-`request_nixo` for Alice failed twice tonight with OutLayer `Execution promise failed` / `nixo_failed: no_result`. Same failure on OutLayer CLI for **both** the new and the previous WASM — looks like a worker/timeout issue on testnet, not a local verdict bug.
+- **Local proof (wasmtime on the pinned bytes):** Alice `clean`, Mallory `rejected` / `taint_path` / `hops: 4` / `trace_depth: 6` / `checker_version: 0.2.0` / `history_source: fixture`
+- Next: when OutLayer accepts runs again, re-certify Alice + Mallory; then implement live NearBlocks via `wasi:http` + author secret
 
-**Repo momentum:** `feat/private-agents` and `feat/uiux` merged to `master` (landing redesign; Agents & vaults page; `agents/app/nixo/*` vault/experiment; multi-provider `llm.py`). Viewing keys still sidebar **Soon**. Root `readme.md` and `docs/` now follow the PRD three-layer narrative.
+**Repo momentum:** Layer 1 fixture + WASM + on-chain pin updated; TEE re-issue blocked by OutLayer. Viewing keys still **Soon**.
 
 **Honest cut order if time runs out (from PRD §8):** keep dry-run Intents + vault gate → say model is not in enclave if needed → one delayed viewing key → mock solver only (not a live network).
 
@@ -120,8 +130,9 @@ Against the **hackathon PRD**, roughly: **Layer 1 ~65–70%** (pipeline real, li
 | Checker `verdict()` + Kani | ✅ | `checker/src/lib.rs`, proofs |
 | Multi-hop `trace::search()` (source) | ✅ | `checker/src/trace.rs` |
 | Fixture certify Alice/Mallory on testnet | ✅ | Live certificates |
-| Live NearBlocks fetch inside enclave | ❌ | Still fixture shell |
-| Redeploy pinned WASM matching source | ❌ | Live `0.1.0` / depth 1 |
+| Live NearBlocks fetch inside enclave | ✅ in source (`0.3.0`) | `checker/src/live.rs`; needs OutLayer secret + redeploy |
+| Redeploy pinned WASM matching source | ⚠️ pin live; certs stale | Hash `574b8182…` active; re-certify blocked by OutLayer failures tonight |
+| Local Alice clean / Mallory `taint_path` depth 6 | ✅ | wasmtime on built `0.2.0` WASM |
 | `nixo.testnet` + OutLayer callback | ✅ | Live config |
 | `/verify`, clean-funds, Verified panel | ✅ | Web app |
 | Mainnet “Check any wallet” preview | ✅ preview only | Not certifiable |
@@ -150,7 +161,8 @@ Against the **hackathon PRD**, roughly: **Layer 1 ~65–70%** (pipeline real, li
 - **PRD:** `NIXO_PRD.md` (authoritative for scope and privacy language)
 - **Agents MVP spec:** `docs/Nixo_agents.md`
 - **Contract:** `nixo.testnet`
-- **Pinned checker hash (live):** `e0c79a99a71cd648fbd2449d9b0518ab4e7e2ec53d6126e49954dc322911bed6`
+- **Pinned checker hash (live on chain):** still older until `0.3.0` WASM is uploaded + applied (local build hash for current source: see `pnpm build:checker`)
+- **Checker version in source:** `0.3.0` (live NearBlocks + offline fixtures)
 - **List snapshot (live):** `data-2026-10-29`, hash `dd83cfea…ce10`
 - **Demo accounts:** `nixo-alice.testnet` (clean), `nixo-mallory.testnet` (rejected)
 - **Mainnet trail (preview):** `farstreet4572.near` → … → Binance-hack wallet `efd2…e5af`

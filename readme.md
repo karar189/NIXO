@@ -227,8 +227,8 @@ nixo/
 |-------|--------|
 | Checker core + multi-hop search (source) | Real; Kani-proven on bounded harnesses |
 | OutLayer + `nixo.testnet` certificates | Real on testnet |
-| Certified Alice / Mallory histories | **Fixtures** compiled into the WASM (`history_source: fixture`). Live NearBlocks fetch inside the enclave is PRD work |
-| Pinned WASM vs current source | Live certs may show older checker metadata (e.g. depth 1 / `list_hit`); rebuild + re-pin after live-history work |
+| Certified histories | **Live by default** inside the enclave: NearBlocks v3 (`history_source: nearblocks-v3:<net>@h=<height>`). **Fixtures** only when `NIXO_OFFLINE=1` (local/CI). Mallory fixture remains a labelled mainnet-trail replay for offline demos. Set `NEARBLOCKS_API_KEY` as an OutLayer author secret for production certify |
+| Pinned WASM vs certificates | On-chain pin is checker `0.2.0` / depth 6 / Mallory `taint_path` (hash `574b8182…`). Local wasmtime matches. Re-issued on-chain certificates may lag if OutLayer TEE runs fail — check `get_certificate` vs `get_checker_hash` |
 | Sanctions lists | Real snapshot `data-2026-10-29` |
 | Hacker list | One entry; unofficial public attribution (AMLBot / Shridlock); say so in demos |
 | `/verify` “Check any wallet” | Preview only (`caller_supplied`); different WASI build hash |
