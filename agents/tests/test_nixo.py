@@ -449,7 +449,10 @@ def test_unknown_code_with_1click_down_fails_setup_cleanly(monkeypatch):
 
     monkeypatch.setattr(oneclick, "tokens", down)
     assets.clear_cache()
-    run = _run(task_targets=[{"asset": "ETH@arb", "usdc": 100}], allowed_chains=["near", "arb"])
+    try:
+        run = _run(task_targets=[{"asset": "ETH@arb", "usdc": 100}], allowed_chains=["near", "arb"])
+    finally:
+        assets.clear_cache()
     assert run.status == "error" and run.phase == "setup"
     assert "ETH@arb" in run.error and "unreachable" in run.error and "NEAR@near" in run.error, run.error
 
@@ -570,7 +573,7 @@ def test_named_provider_keeps_its_model_and_rules_calls_nothing(mock_providers):
     install(failing=set())
     run = _llm_run(llm_provider="deepseek", llm_model="deepseek-test")
     assert run.llm_info == {"provider": "deepseek", "model": "deepseek-test", "label": "DeepSeek", "note": None}
-    assert {c for c in calls} == {("deepseek", "deepseek-test")}
+    assert set(calls) == {("deepseek", "deepseek-test")}
     calls.clear()
     assert _llm_run(llm_provider="rules").llm_info["provider"] == "rules" and not calls
 
