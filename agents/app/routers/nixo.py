@@ -76,8 +76,10 @@ def get_audit(run_id: str, x_near_account: str | None = Header(None)) -> dict:
     return {"run_id": run.run_id, "labels": LABELS, "events": run.audit.events}
 
 
+# The owner actions are async so they run on the event loop with the experiment: a revoke during a run lands
+# between its steps, and never between a vault authorization and the execution of that ticket.
 @router.post("/runs/{run_id}/revoke")
-def revoke(run_id: str, x_near_account: str | None = Header(None)) -> dict:
+async def revoke(run_id: str, x_near_account: str | None = Header(None)) -> dict:
     owner = account_id(x_near_account)
     run = _run(owner, run_id)
     try:
@@ -88,7 +90,7 @@ def revoke(run_id: str, x_near_account: str | None = Header(None)) -> dict:
 
 
 @router.post("/runs/{run_id}/attempt")
-def attempt(run_id: str, body: AttemptBody, x_near_account: str | None = Header(None)) -> dict:
+async def attempt(run_id: str, body: AttemptBody, x_near_account: str | None = Header(None)) -> dict:
     run = _run(account_id(x_near_account), run_id)
     if run.status in ("pending", "running"):
         raise HTTPException(409, "Wait for the run to finish before sending manual requests")

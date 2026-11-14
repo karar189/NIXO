@@ -114,11 +114,11 @@ def build_prompt(ctx: AgentContext) -> str:
 def _amount(x) -> Decimal | None:
     try:
         d = Decimal(str(x))
+        if not d.is_finite():
+            return None
+        return d.quantize(UNIT, rounding=ROUND_DOWN)  # InvalidOperation from 1e22 up: too big for 6 decimals
     except (InvalidOperation, ValueError):
         return None
-    if not d.is_finite():
-        return None
-    return d.quantize(UNIT, rounding=ROUND_DOWN)
 
 
 def _asset_in(raw: str) -> str:
@@ -169,7 +169,9 @@ class AgentRunner:
         amount = _amount(d.get("amount_in"))
         source = f"{r.provider}:{r.model}"
         if d["action"] == "hold" or amount is None or amount <= 0:
+            note = None if d["action"] == "hold" else (f"invalid amount {d.get('amount_in')} treated as hold"
+                                                       if amount is None else "non-positive amount treated as hold")
             return Proposal("hold", ALLOCATION_CODE, Decimal(0), str(d["asset_out"]), d.get("rationale", ""), source,
-                            r.latency_ms, note=None if d["action"] == "hold" else "non-positive amount treated as hold")
+                            r.latency_ms, note=note)
         return Proposal("swap", _asset_in(str(d["asset_in"])), amount, str(d["asset_out"]), d.get("rationale", ""),
                         source, r.latency_ms)

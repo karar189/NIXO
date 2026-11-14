@@ -277,10 +277,11 @@ def check_request(req: TradeRequest, a: Assignment, seen_request: bool) -> tuple
             return Reason.RECIPIENT_NOT_ALLOWED, (f"output may only go to the vault or the owner's pinned "
                                                   f"{chain or 'chain'} address")
     amt = req.amount_in
+    # The cap comes before quantize(), which raises InvalidOperation for amounts from 1e22 up (28-digit context).
+    if amt.is_finite() and amt > p.max_trade_amount:
+        return Reason.MAX_TRADE_EXCEEDED, f"{amt} exceeds the per-trade limit {p.max_trade_amount}"
     if not amt.is_finite() or amt <= 0 or amt != amt.quantize(UNIT):
         return Reason.INVALID_AMOUNT, f"amount must be > 0 with at most 6 decimals (got {amt})"
-    if amt > p.max_trade_amount:
-        return Reason.MAX_TRADE_EXCEEDED, f"{amt} exceeds the per-trade limit {p.max_trade_amount}"
     committed = a.settled_spend + a.reserved + a.held
     if committed + amt > p.max_total_spend:
         return Reason.TOTAL_SPEND_EXCEEDED, (f"{committed} committed + {amt} exceeds the total-spend limit "
