@@ -2,7 +2,12 @@
 
 ## MVP v0.1: Verified Capital & Agent Authorization
 
-**Status:** Proposed implementation specification\
+**Status:** Implemented as an **off-chain** experiment (`agents/app/nixo/`, UI
+`/dashboard/agents`). Provenance is a labelled stub; enforcement is not yet a
+NEAR contract.\
+**Product home:** this experiment is **Layer 2** of the agreed product in
+[`NIXO_PRD.md`](../NIXO_PRD.md). On product language, privacy claims, and
+hackathon cut order, the PRD wins.\
 **Scope:** Two-agent controlled experiment\
 **Primary objective:** Demonstrate that an AI agent can complete a
 useful financial task while operating under enforceable capital
@@ -12,8 +17,11 @@ permissions.
 
 ## 1. Executive Summary
 
-NIXO is exploring a financial trust and authorization layer for AI
-agents.
+NIXO's full product is a clean-funds passport plus a gated trading layer
+(tracer → vault → solver). This document specifies only the **Layer 2
+experiment**: capital assigned to an AI agent with a provenance record and
+permissions enforced at the transaction boundary — today in-process, target
+on-chain and gated by `nixo.testnet.is_clean` per the PRD.
 
 The core idea is not simply to give an AI agent a wallet. It is to let
 an owner allocate capital to an agent with a minimal provenance record
@@ -26,7 +34,8 @@ The first MVP should prove one narrow claim:
 > environment, while respecting enforceable financial limits.
 
 The MVP is an experiment, not yet a production financial infrastructure
-network.
+network. Viewing keys, encrypted trade logs, and the mock solver are PRD
+items outside this experiment's code path unless explicitly added later.
 
 ### What we are building
 
@@ -34,24 +43,27 @@ network.
 -   Equivalent, isolated starting capital for each agent.
 -   One unrestricted agent as the baseline.
 -   One constrained agent whose permissions are checked by the
-    vault/authorization contract.
--   A minimal per-deposit provenance record.
+    vault/authorization boundary (off-chain now; contract later).
+-   A minimal per-deposit provenance record (stub verification status today).
 -   A spending limit and an owner-controlled revoke path.
 -   An audit trail that makes both agents' actions comparable.
 -   Adversarial tests that attempt to bypass the constrained agent's
     permissions.
 
-### Explicitly out of scope
+### Explicitly out of scope *for this experiment doc*
 
--   Building or operating a NEAR Intents solver.
+(These may still be in scope for the overall product — see the PRD.)
+
+-   Building or operating a NEAR Intents solver (PRD Layer 3).
 -   Integrating a solver network.
--   Building a full clean-funds certificate system.
--   Production-grade sanctions screening or full transaction-history
-    tracing.
--   Multi-chain support.
+-   Building the full clean-funds certificate system (PRD Layer 1; already
+    partly shipped as `nixo.testnet` + checker).
+-   Production-grade sanctions screening or live enclave history fetch.
+-   On-chain vault + `is_clean` deposit gate (PRD Layer 2 target; not this
+    off-chain MVP).
+-   Encrypted trade log / viewing-key marketplace.
 -   Agent marketplaces or multi-agent orchestration.
 -   Leverage, derivatives, or complex portfolio management.
--   A general-purpose trading product.
 -   Claims that the MVP proves profitability or complete financial
     provenance.
 
@@ -70,10 +82,12 @@ with:
 5.  **Auditability:** records showing what the agent attempted and what
     actually happened.
 
-NIXO's proposed role is to connect those properties to agent execution.
+NIXO's role is to connect those properties to agent execution, after Layer 1
+has produced a clean-funds certificate the vault can trust.
 
-The MVP tests whether this is useful in practice before expanding into
-solver infrastructure or a broader protocol.
+The experiment tests whether constrained agents are useful in practice. The
+broader protocol (live enclave history, on-chain vault gate, viewing keys,
+mock solver) is specified in the PRD, not here.
 
 ------------------------------------------------------------------------
 

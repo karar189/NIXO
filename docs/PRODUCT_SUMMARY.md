@@ -21,7 +21,7 @@
 - `nixo-alice.testnet` → `clean`, valid, `history_source: fixture`, `trace_depth: 1`
 - `nixo-mallory.testnet` → `rejected` / `list_hit`, valid, `history_source: fixture`, `trace_depth: 1`
 
-**Repo momentum today:** `feat/private-agents` and `feat/uiux` merged to `master` (landing redesign; Agents & vaults page; `agents/app/nixo/*` vault/experiment; multi-provider `llm.py`). Viewing keys still sidebar **Soon**. `NIXO_PRD.md` is uncommitted locally; older “Agents & vaults coming soon” narrative in this summary is obsolete.
+**Repo momentum:** `feat/private-agents` and `feat/uiux` merged to `master` (landing redesign; Agents & vaults page; `agents/app/nixo/*` vault/experiment; multi-provider `llm.py`). Viewing keys still sidebar **Soon**. Root `readme.md` and `docs/` now follow the PRD three-layer narrative.
 
 **Honest cut order if time runs out (from PRD §8):** keep dry-run Intents + vault gate → say model is not in enclave if needed → one delayed viewing key → mock solver only (not a live network).
 
@@ -49,7 +49,6 @@ The web app is a **desk**: certificate next to trading and the agent experiment.
 - **NIXO agents experiment** (`/dashboard/agents`, `agents/app/nixo/`) — two agents, same task, equivalent capital; Agent B through an off-chain vault; 14+ adversarial tests; audit trail. Spec: `docs/Nixo_agents.md`.
 - **Trading desk** (`/dashboard/trade`) — paper trades with real 1Click dry quotes; live NEAR/USDC spot via Intents; FastAPI agents with multi-provider LLM (Anthropic, OpenAI, DeepSeek, NVIDIA NIM, NEAR AI).
 - **NestJS waitlist** — landing form only.
-- **Swarma** — planning docs only, parked.
 
 ---
 
@@ -104,7 +103,7 @@ Exchanges are the paying customer long-term; users get the passport. Hackathon j
 5. **No mock solver / solver SDK.**
 6. **TEE strategy not proven live** — landing “build”; attestation story strongest on the checker/explainer path.
 7. **Hop coverage limited** — native + Ref pool hops; bridges/other DEX/`intents.near` not fully followed.
-8. **Submission polish** — README placeholders (demo URL, video, org URL); PRD file not yet committed on this machine’s status check.
+8. **Submission polish** — README placeholders remain (demo URL, video, org URL / clone path).
 
 ---
 
