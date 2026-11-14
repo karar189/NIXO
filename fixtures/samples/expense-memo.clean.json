@@ -1,0 +1,25 @@
+{
+  "label": "Fictional expense memo (track sample — no real bank data)",
+  "memo": {
+    "title": "Q4 team offsite — reimbursable spend summary",
+    "period": "2026-10-01 … 2026-10-31",
+    "currency": "USD",
+    "line_items": [
+      { "category": "travel", "merchant": "Northline Air (sample)", "amount": 412.5 },
+      { "category": "lodging", "merchant": "Cedar House Inn (sample)", "amount": 680.0 },
+      { "category": "meals", "merchant": "Harbor Kitchen (sample)", "amount": 214.75 },
+      { "category": "software", "merchant": "Lattice Tools (sample)", "amount": 49.0 }
+    ],
+    "notes": "Synthetic document for hackathon judges. Not a real statement."
+  },
+  "linked_certificate": {
+    "account": "nixo-alice.testnet",
+    "verdict": "clean",
+    "reason": null,
+    "checker_version": "0.3.0",
+    "list_snapshot": "data-2026-10-29",
+    "trace_depth": 6,
+    "history_source": "fixture",
+    "valid": true
+  }
+}

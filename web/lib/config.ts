@@ -1,4 +1,7 @@
 export const NIXO_CONTRACT = process.env.NEXT_PUBLIC_NIXO_CONTRACT ?? "nixo.testnet";
+/** Layer 2 vault. Empty string disables on-chain vault UI actions. */
+export const NIXO_VAULT_CONTRACT =
+  process.env.NEXT_PUBLIC_NIXO_VAULT_CONTRACT ?? "nixo-vault.testnet";
 export const NEAR_RPC = process.env.NEXT_PUBLIC_NEAR_RPC ?? "https://test.rpc.fastnear.com";
 export const EXPLORER = process.env.NEXT_PUBLIC_EXPLORER ?? "https://testnet.nearblocks.io";
 export const OUTLAYER_APP = process.env.NEXT_PUBLIC_OUTLAYER_APP ?? "https://app.outlayer.ai";

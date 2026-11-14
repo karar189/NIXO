@@ -25,12 +25,21 @@ pub fn source(wasm_url: &str, wasm_hash: &str) -> Value {
 }
 
 pub fn resource_limits() -> Value {
-    json!({ "max_instructions": 10_000_000_000u64, "max_memory_mb": 128u32, "max_execution_seconds": 30u64 })
+    // Larger fixture-backed WASM (depth-6 trail) needs more headroom than the
+    // original depth-1 demo binary. Stay within OutLayer platform caps
+    // (100B instructions / 60s).
+    json!({ "max_instructions": 50_000_000_000u64, "max_memory_mb": 256u32, "max_execution_seconds": 60u64 })
 }
 
 /// The only public input: the caller's account. Never the history.
 pub fn input_data(account: &AccountId) -> String {
     json!({ "account": account }).to_string()
+}
+
+/// Ask OutLayer to inject the author's encrypted secrets (e.g. `NEARBLOCKS_API_KEY`)
+/// as env vars inside the TEE. `account_id` is who stored the secrets.
+pub fn secrets_ref(owner: &AccountId) -> Value {
+    json!({ "profile": "default", "account_id": owner })
 }
 
 /// Mirror of the checker's `shell::Output`.

@@ -1,14 +1,17 @@
-"""NIXO v0.1: verified capital and agent authorization (two-agent experiment).
+"""NIXO Layer 2: verified capital and agent authorization.
 
-See Nixo_agents.md at the repo root. Modules:
+See docs/Nixo_agents.md (off-chain experiment) and vault/ (on-chain contract).
 
-- audit:      common audit-event schema shared by both agents
-- vault:      provenance registry + authorization vault (Agent B's enforcement boundary)
-- adapter:    shared paper execution adapter priced from a frozen market snapshot
-- runner:     agent decision logic (LLM via app.llm, or deterministic rules)
-- experiment: orchestrates setup, task phase, adversarial suite and revocation
+Modules:
 
-Honesty labels (surfaced in every report): execution is simulated, provenance
-verification is a stub, and enforcement in v0.1 runs inside the agents service
-(off-chain). Nothing here is on-chain proof.
+- audit:         common audit-event schema shared by both agents
+- vault:         provenance registry + authorization vault (Agent B, off-chain)
+- adapter:       shared paper execution adapter priced from a frozen market snapshot
+- runner:        agent decision logic (LLM via app.llm, or deterministic rules)
+- experiment:    orchestrates setup, task phase, adversarial suite and revocation
+- onchain:       view helpers / execute arg builders for nixo-vault.testnet
+- viewing_keys:  encrypted trade log + delayed viewing-key path
+
+The off-chain experiment keeps stub provenance labels. On-chain deposits use
+nixo.testnet.is_clean; set NIXO_VAULT_CONTRACT to enable that mode in the API.
 """

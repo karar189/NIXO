@@ -1,10 +1,18 @@
-// Explainer: turns the PUBLIC on-chain certificate into a plain-English note
-// using NEAR AI Cloud. The model never sees any history: the server re-reads the
-// certificate from chain itself and sends only that.
+/**
+ * Certificate explainer via NEAR AI Cloud (TEE-hosted model).
+ *
+ * Ephemeral: re-reads the PUBLIC on-chain certificate, sends only that to the
+ * model, fetches a fresh-nonce attestation, returns the note + checks.
+ * Does not persist prompts, completions, or attestation blobs.
+ */
 import { getCertificate } from "@/lib/nixo-sdk";
-
-const BASE = process.env.NEARAI_BASE_URL ?? "https://cloud-api.near.ai/v1";
-const MODEL = process.env.NEARAI_MODEL ?? "deepseek-ai/DeepSeek-V3.1";
+import {
+  NEARAI_MODEL,
+  chatCompletion,
+  fetchAttestationReport,
+  freshNonce,
+  summarizeAttestation,
+} from "@/lib/nearai";
 
 export async function POST(req: Request) {
   const { account } = (await req.json().catch(() => ({}))) as { account?: string };
@@ -15,45 +23,63 @@ export async function POST(req: Request) {
   const view = await getCertificate(account).catch(() => null);
   if (!view) return Response.json({ error: "no certificate on-chain" }, { status: 404 });
 
-  const nonce = crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "");
-  const headers = { authorization: `Bearer ${key}`, "content-type": "application/json" };
+  const model = NEARAI_MODEL;
+  const nonce = freshNonce();
 
-  const [chat, attestation] = await Promise.all([
-    fetch(`${BASE}/chat/completions`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0,
-        max_tokens: 300,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You write short compliance notes (max 120 words) about a NIXO clean-funds certificate for a user or a compliance officer. " +
-              "Use only the certificate fields given. Never speculate about the user's transactions; you have not seen them. " +
-              "State: verdict, what was checked (lists snapshot, trace depth), when it expires, whether it is currently valid, and that the history source is simulated if history_source is 'fixture'.",
-          },
-          { role: "user", content: JSON.stringify(view) },
-        ],
-      }),
-    }).then((r) => r.json()),
-    fetch(`${BASE}/attestation/report?model=${encodeURIComponent(MODEL)}&nonce=${nonce}`, { headers })
-      .then(async (r) => (r.ok ? r.json() : { error: `HTTP ${r.status}` }))
-      .catch((e) => ({ error: String(e) })),
+  const [chat, report] = await Promise.all([
+    chatCompletion({
+      apiKey: key,
+      model,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You write short compliance notes (max 120 words) about a NIXO clean-funds certificate for a user or a compliance officer. " +
+            "Use only the certificate fields given. Never speculate about the user's transactions; you have not seen them. " +
+            "State: verdict, what was checked (lists snapshot, trace depth), when it expires, whether it is currently valid, and that the history source is simulated if history_source is 'fixture'.",
+        },
+        { role: "user", content: JSON.stringify(view) },
+      ],
+    }),
+    fetchAttestationReport({ apiKey: key, model, nonce }),
   ]);
 
-  const text = chat?.choices?.[0]?.message?.content ?? null;
-  if (!text) return Response.json({ error: "explainer failed", detail: chat }, { status: 502 });
-  return Response.json({
-    text,
-    model: MODEL,
-    nonce,
-    attestation: {
-      fetched: !attestation?.error,
-      // Echo check only; full TDX/GPU quote verification is listed as future work.
-      nonce_echoed: JSON.stringify(attestation ?? {}).includes(nonce),
-      error: attestation?.error ?? null,
+  if (!chat.ok) {
+    return Response.json(
+      { error: "explainer failed", detail: chat.error },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const checks = [
+    {
+      id: "public_cert_only",
+      label: "Model received only the public on-chain certificate",
+      status: "pass" as const,
+      detail: `account=${account}`,
     },
-  });
+    {
+      id: "ephemeral",
+      label: "No server-side retention after response",
+      status: "pass" as const,
+    },
+    ...summarizeAttestation(report, nonce),
+  ];
+
+  return Response.json(
+    {
+      text: chat.text,
+      model,
+      nonce,
+      completion_id: chat.id,
+      ephemeral: true,
+      checks,
+      attestation: {
+        fetched: !Boolean((report as { error?: string })?.error),
+        nonce_echoed: checks.some((c) => c.id === "nonce_bound" && c.status === "pass"),
+        error: (report as { error?: string })?.error ?? null,
+      },
+    },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } },
+  );
 }

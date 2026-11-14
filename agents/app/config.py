@@ -60,5 +60,12 @@ class Settings(BaseSettings):
     # After an auth/quota failure a provider is skipped by "auto" for this long.
     llm_cooldown_seconds: float = 600.0
 
+    # Layer 2 on-chain vault (native NEAR). When set, /nixo/onchain reports on-chain mode.
+    nixo_vault_contract: str | None = Field(None, validation_alias="NIXO_VAULT_CONTRACT")
+    nixo_contract: str = Field("nixo.testnet", validation_alias="NIXO_CONTRACT")
+    near_rpc: str = Field("https://test.rpc.fastnear.com", validation_alias="NEAR_RPC")
+    # Delayed viewing-key default delay (seconds) before redeemable.
+    viewing_key_delay_seconds: float = Field(60.0, validation_alias="NIXO_VIEWING_KEY_DELAY")
+
 
 settings = Settings()

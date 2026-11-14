@@ -1,0 +1,18 @@
+{
+  "label": "Alice — clean passport (fictional sample)",
+  "certificate": {
+    "account": "nixo-alice.testnet",
+    "verdict": "clean",
+    "reason": null,
+    "checker_hash": "3ebe1fb88671973b15d4106073e356bdc429f4926c4a777be9bca9d74461ed59",
+    "checker_version": "0.3.0",
+    "list_snapshot": "data-2026-10-29",
+    "list_hash": "7be634d340fc53133a724ec9757f3759de86e5d96e390ce2a09a153956c79826",
+    "trace_depth": 6,
+    "history_source": "fixture",
+    "input_hash": "6100242e0507f949db8fa53cb844dde01103039e92ec5ce7f8171e4524eee128",
+    "issued_at_ns": "1794548869383495950",
+    "expires_at_ns": "1795153669383495950"
+  },
+  "valid": true
+}

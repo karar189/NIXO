@@ -23,6 +23,9 @@ import { ModelPicker, usePlannerInfo } from "@/components/llm/ModelPicker";
 import { AgentBrain } from "@/components/agents/AgentBrain";
 import { RunCharts } from "@/components/agents/RunCharts";
 import { AssetPicker, chainOf, symbolOf, useCatalogue } from "@/components/agents/AssetPicker";
+import { OnchainVaultPanel } from "@/components/agents/OnchainVaultPanel";
+import { ViewingKeysPanel } from "@/components/agents/ViewingKeysPanel";
+import { NIXO_VAULT_CONTRACT } from "@/lib/config";
 import {
   ALLOCATION_CODE,
   nixoApi,
@@ -927,15 +930,19 @@ export default function AgentsPage() {
           <h1 className="display text-2xl">Verified capital &amp; agent authorization</h1>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
             Two agents, the same task and equivalent capital. Agent B works through an authorization vault that enforces its
-            owner&apos;s rules at the transaction boundary; Agent A is the unrestricted baseline.
+            owner&apos;s rules at the transaction boundary; Agent A is the unrestricted baseline. Below: on-chain vault
+            gated by <code className="font-mono">is_clean</code>, plus a delayed viewing-key path for the encrypted trade log.
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <Tag tone="mock">simulated execution</Tag>
-          <Tag tone="mock">stub provenance</Tag>
-          <Tag tone="warn">service-enforced · off-chain</Tag>
+          <Tag tone="mock">off-chain experiment</Tag>
+          {NIXO_VAULT_CONTRACT ? <Tag tone="clean">on-chain vault · {NIXO_VAULT_CONTRACT}</Tag> : <Tag tone="warn">vault contract unset</Tag>}
+          <Tag tone="accent">delayed viewing key</Tag>
         </div>
       </div>
+
+      <OnchainVaultPanel />
+      <ViewingKeysPanel runId={runId} />
 
       <SetupCard cfg={cfg} setCfg={setCfg} onRun={run} busy={busy || Boolean(active)} disabled={!account} account={account} />
 

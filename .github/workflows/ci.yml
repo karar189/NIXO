@@ -36,6 +36,14 @@ jobs:
       - run: rustup show
       - run: cargo test --locked
 
+  vault:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: vault } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: cargo test --locked
+
   web:
     runs-on: ubuntu-latest
     steps:

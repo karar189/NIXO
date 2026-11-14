@@ -9,6 +9,8 @@
 //! runs `verdict()` first (list hits on the account and its direct
 //! counterparties), then `trace::search()` for paths up to `trace::MAX_HOPS`.
 
+pub mod http_get;
+pub mod live;
 pub mod shell;
 pub mod trace;
 

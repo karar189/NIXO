@@ -28,9 +28,9 @@ const LISTS: &[(&str, &str)] = &[
 
 /// Input.
 ///
-/// Certified mode (what the NIXO contract sends through OutLayer): only
-/// `account`. OutLayer `input_data` is public, so the history never travels in
-/// it; the checker uses the history compiled into this WASM.
+/// Certified mode (what the NIXO contract sends through OutLayer): `account`
+/// and optionally `network`. History is fetched inside the enclave from
+/// NearBlocks v3 (or from labelled fixtures when `NIXO_OFFLINE=1`).
 ///
 /// Preview mode (web "check any wallet"): `account` plus a fetched `history`.
 /// The result is marked `history_source: "caller_supplied"`, and the contract
@@ -39,6 +39,9 @@ const LISTS: &[(&str, &str)] = &[
 #[serde(deny_unknown_fields)]
 pub struct Input {
     pub account: String,
+    /// Optional network override (`mainnet` / `testnet`). Must match the account.
+    #[serde(default)]
+    pub network: Option<String>,
     #[serde(default)]
     pub history: Option<HistoryDoc>,
 }
@@ -101,18 +104,43 @@ pub enum Edge {
 pub const SOURCE_FIXTURE: &str = "fixture";
 pub const SOURCE_CALLER: &str = "caller_supplied";
 
-/// Histories compiled into the WASM: the only ones that can be certified.
+/// Histories compiled into the WASM for offline / CI (`NIXO_OFFLINE=1`).
 const FIXTURES: &[&str] = &[
     include_str!("../../fixtures/alice.json"),
     include_str!("../../fixtures/mallory.json"),
 ];
 
-/// History source adapter. Unknown account => None => fail closed.
+/// Documented offline switch: fixtures only. Never used as a silent fallback
+/// after a failed live fetch.
+pub fn offline_fixtures_enabled() -> bool {
+    fn truthy(v: Result<String, std::env::VarError>) -> bool {
+        matches!(v.ok().as_deref(), Some("1" | "true" | "TRUE" | "yes" | "YES"))
+    }
+    truthy(std::env::var("NIXO_OFFLINE")) || truthy(std::env::var("NIXO_USE_FIXTURES")) || cfg!(test)
+}
+
+/// Fixture history for offline mode. Unknown account => None => fail closed.
 pub fn load_history(account: &str) -> Option<HistoryDoc> {
     FIXTURES
         .iter()
         .filter_map(|f| serde_json::from_str::<HistoryDoc>(f).ok())
         .find(|h| normalize(&h.subject) == account)
+}
+
+/// NEAR account ids from the pinned lists (EVM `0x…` skipped). Used as live-fetch seeds.
+pub fn listed_near_accounts() -> std::collections::HashSet<String> {
+    let mut s = std::collections::HashSet::new();
+    for (_, text) in LISTS {
+        for line in list_entries(text) {
+            let n = normalize(line);
+            let is_near = n.ends_with(".near") || n.ends_with(".testnet") || n.ends_with(".tg");
+            let is_implicit = n.len() == 64 && n.bytes().all(|b| b.is_ascii_hexdigit());
+            if is_near || is_implicit {
+                s.insert(n);
+            }
+        }
+    }
+    s
 }
 
 /// One hop of a taint path, as shown in the preview (never on-chain).
@@ -155,7 +183,7 @@ pub struct Output {
     pub list_snapshot: &'static str,
     pub list_hash: String,
     pub trace_depth: u8,
-    pub history_source: &'static str,
+    pub history_source: String,
     pub input_hash: String,
     /// Preview only: the path, listed address first.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -395,17 +423,31 @@ pub fn assess(doc: &HistoryDoc, banned: &[Addr]) -> (Verdict, Option<Vec<Hop>>) 
 pub fn run(raw: &[u8]) -> Output {
     let input_hash = hex::encode(Sha256::digest(raw));
     let banned = banned();
-    let mut source = SOURCE_FIXTURE;
+    let mut source = String::new();
     let mut incomplete_notes = None;
     let (account, v, path) = match serde_json::from_slice::<Input>(raw) {
         Ok(input) if !input.account.trim().is_empty() => {
             let account = normalize(&input.account);
             let doc = match input.history {
                 Some(doc) => {
-                    source = SOURCE_CALLER;
+                    source = SOURCE_CALLER.to_string();
                     (normalize(&doc.subject) == account).then_some(doc)
                 }
-                None => load_history(&account),
+                None if offline_fixtures_enabled() => {
+                    source = SOURCE_FIXTURE.to_string();
+                    load_history(&account)
+                }
+                None => match crate::live::fetch_history(&account, input.network.as_deref()) {
+                    Ok((doc, src)) => {
+                        source = src;
+                        Some(doc)
+                    }
+                    Err(_) => {
+                        // Fail closed — never fall through to fixtures after a live miss.
+                        source = "nearblocks-v3:unavailable".to_string();
+                        None
+                    }
+                },
             };
             match doc {
                 Some(doc) => {
@@ -427,6 +469,7 @@ pub fn run(raw: &[u8]) -> Output {
         Verdict::Rejected(r) => ("rejected", Some(r.code())),
     };
     let hops = path.as_ref().map(|p| p.len() as u8).filter(|&n| n > 0);
+    let is_caller = source == SOURCE_CALLER;
     Output {
         account,
         verdict,
@@ -439,7 +482,7 @@ pub fn run(raw: &[u8]) -> Output {
         history_source: source,
         input_hash,
         // The path never goes on-chain: only previews (caller-supplied) get it.
-        path: if source == SOURCE_CALLER { path } else { None },
+        path: if is_caller { path } else { None },
         incomplete: incomplete_notes,
     }
 }
@@ -507,7 +550,7 @@ mod tests {
         let o = run(ALICE);
         assert_eq!(o.account, "nixo-alice.testnet");
         assert_eq!((o.verdict, o.reason, o.hops), ("clean", None, None));
-        assert_eq!(o.history_source, "fixture");
+        assert_eq!(o.history_source.as_str(), "fixture");
     }
 
     #[test]
@@ -589,13 +632,13 @@ mod tests {
     fn preview_subject_must_match_account() {
         let raw = br#"{"account":"x.near","history":{"version":1,"subject":"y.near","network":"mainnet","source":"t","fetched_at":"","max_hops":6,"expanded":["y.near"],"incomplete":[],"edges":[]}}"#;
         let o = run(raw);
-        assert_eq!((o.verdict, o.reason, o.history_source), ("rejected", Some("malformed_input"), "caller_supplied"));
+        assert_eq!((o.verdict, o.reason, o.history_source.as_str()), ("rejected", Some("malformed_input"), "caller_supplied"));
     }
     #[test]
     fn caller_supplied_history_is_marked() {
         let raw = br#"{"account":"y.near","history":{"version":1,"subject":"y.near","network":"mainnet","source":"t","fetched_at":"","max_hops":6,"expanded":["y.near"],"incomplete":[],"edges":[]}}"#;
         let o = run(raw);
-        assert_eq!((o.verdict, o.history_source), ("clean", "caller_supplied"));
+        assert_eq!((o.verdict, o.history_source.as_str()), ("clean", "caller_supplied"));
     }
     #[test]
     fn garbage_fails_closed() {

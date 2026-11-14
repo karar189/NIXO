@@ -2,6 +2,8 @@
 
 The caller's NEAR account (X-Near-Account) is the owner of the experiment's
 deposits and the only account that can revoke its assignments.
+
+Also exposes on-chain vault status helpers and the delayed viewing-key path.
 """
 
 from decimal import Decimal
@@ -10,9 +12,11 @@ from typing import Literal
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from app.nixo import assets
+from app.config import settings
+from app.nixo import assets, onchain, viewing_keys
 from app.nixo.experiment import CODE_PATTERN, LABELS, ExperimentConfig, store
 from app.nixo.vault import VaultError
+from app.nixo.viewing_keys import KeyType
 from app.routers.trading import account_id
 
 router = APIRouter(prefix="/nixo", tags=["nixo"])
@@ -47,7 +51,137 @@ async def list_assets() -> dict:
 
 @router.get("/defaults")
 def defaults() -> dict:
-    return {"config": ExperimentConfig().model_dump(mode="json"), "labels": LABELS}
+    labels = {**LABELS, **onchain.enforcement_label()}
+    return {
+        "config": ExperimentConfig().model_dump(mode="json"),
+        "labels": labels,
+        "vault_contract": settings.nixo_vault_contract,
+        "nixo_contract": settings.nixo_contract,
+    }
+
+
+@router.get("/onchain")
+async def onchain_status() -> dict:
+    return await onchain.status()
+
+
+@router.get("/onchain/deposits/{owner}")
+async def onchain_deposits(owner: str) -> dict:
+    if not settings.nixo_vault_contract:
+        raise HTTPException(503, "NIXO_VAULT_CONTRACT is not set")
+    rows = await onchain.view("list_deposits_by_owner", {"owner": owner})
+    return {"owner": owner, "deposits": rows}
+
+
+@router.get("/onchain/deposit/{deposit_id}")
+async def onchain_deposit(deposit_id: int) -> dict:
+    if not settings.nixo_vault_contract:
+        raise HTTPException(503, "NIXO_VAULT_CONTRACT is not set")
+    row = await onchain.view("get_deposit", {"deposit_id": str(deposit_id)})
+    return {"deposit": row}
+
+
+@router.get("/onchain/assignment/{assignment_id}")
+async def onchain_assignment(assignment_id: int) -> dict:
+    if not settings.nixo_vault_contract:
+        raise HTTPException(503, "NIXO_VAULT_CONTRACT is not set")
+    row = await onchain.view("get_assignment", {"assignment_id": str(assignment_id)})
+    return {"assignment": row}
+
+
+class ExecuteArgsBody(BaseModel):
+    assignment_id: int
+    amount_near: str = Field(min_length=1, max_length=64)
+    target: str = Field(min_length=2, max_length=64)
+    dry_run: bool = True
+
+
+@router.post("/onchain/execute-args")
+def onchain_execute_args(body: ExecuteArgsBody) -> dict:
+    """Build `execute` args for wallet / FC-key signing (service does not sign)."""
+    if not settings.nixo_vault_contract:
+        raise HTTPException(503, "NIXO_VAULT_CONTRACT is not set")
+    return {
+        "contract": settings.nixo_vault_contract,
+        "method": "execute",
+        "args": onchain.execute_args(
+            assignment_id=body.assignment_id,
+            amount_near=body.amount_near,
+            target=body.target,
+            dry_run=body.dry_run,
+        ),
+        "deposit": "0",
+        "gas": str(50 * 10**12),
+    }
+
+
+class ViewingOfferBody(BaseModel):
+    run_id: str = Field(min_length=3, max_length=64)
+    delay_seconds: float | None = Field(None, ge=0, le=86400)
+    key_type: Literal["delayed", "live", "time_limited", "auditor"] = "delayed"
+
+
+class ViewingRedeemBody(BaseModel):
+    key_id: str = Field(min_length=3, max_length=64)
+    buyer_x25519_pub_b64: str = Field(min_length=40, max_length=128)
+
+
+class ViewingAppendBody(BaseModel):
+    run_id: str
+    payload: dict
+    deposit_id: str | None = None
+    assignment_id: str | None = None
+
+
+@router.post("/viewing/append")
+def viewing_append(body: ViewingAppendBody, x_near_account: str | None = Header(None)) -> dict:
+    owner = account_id(x_near_account)
+    entry = viewing_keys.store.append_trade(
+        run_id=body.run_id,
+        owner=owner,
+        payload=body.payload,
+        deposit_id=body.deposit_id,
+        assignment_id=body.assignment_id,
+    )
+    return {"entry": entry.to_dict()}
+
+
+@router.post("/viewing/offer")
+def viewing_offer(body: ViewingOfferBody, x_near_account: str | None = Header(None)) -> dict:
+    owner = account_id(x_near_account)
+    if body.key_type != "delayed":
+        offer = viewing_keys.store.stub_offer(run_id=body.run_id, owner=owner, key_type=KeyType(body.key_type))
+    else:
+        delay = body.delay_seconds if body.delay_seconds is not None else settings.viewing_key_delay_seconds
+        offer = viewing_keys.store.create_delayed_offer(run_id=body.run_id, owner=owner, delay_seconds=delay)
+    return {"offer": offer.to_dict()}
+
+
+@router.post("/viewing/redeem")
+def viewing_redeem(body: ViewingRedeemBody, x_near_account: str | None = Header(None)) -> dict:
+    buyer = account_id(x_near_account)
+    try:
+        return viewing_keys.store.redeem(
+            key_id=body.key_id, buyer=buyer, buyer_x25519_pub_b64=body.buyer_x25519_pub_b64
+        )
+    except PermissionError as err:
+        raise HTTPException(403, str(err)) from err
+    except KeyError as err:
+        raise HTTPException(404, str(err)) from err
+
+
+@router.get("/viewing/runs/{run_id}")
+def viewing_run(run_id: str) -> dict:
+    return {
+        "run_id": run_id,
+        "offers": viewing_keys.store.list_offers(run_id),
+        "entries": viewing_keys.store.list_entries(run_id),
+    }
+
+
+@router.post("/viewing/keypair")
+def viewing_keypair() -> dict:
+    return viewing_keys.generate_buyer_keypair()
 
 
 @router.post("/runs")
