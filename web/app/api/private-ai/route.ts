@@ -36,7 +36,9 @@ async function loadSample(id: string): Promise<unknown> {
   ];
   for (const p of candidates) {
     try {
-      return JSON.parse(await readFile(p, "utf8"));
+      // Traced via outputFileTracingIncludes in next.config.ts; a dynamic path here
+      // would otherwise pull the whole repo into this function's bundle.
+      return JSON.parse(await readFile(/*turbopackIgnore: true*/ p, "utf8"));
     } catch {
       /* try next */
     }

@@ -11,6 +11,8 @@
 const FORWARD_REQUEST_HEADERS = ["content-type", "accept", "x-near-account"] as const;
 // The strategy planner can take up to ~90 s (LLM), so allow a little more.
 const TIMEOUT_MS = 100_000;
+// Serverless function limit: must outlast TIMEOUT_MS.
+export const maxDuration = 120;
 
 function fail(status: number, detail: string) {
   return Response.json({ detail }, { status });

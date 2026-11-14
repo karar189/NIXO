@@ -8,10 +8,9 @@ Writes (all git-ignored):
     deploy/aws/agents.env   agents container
     deploy/aws/backend.env  backend container
     deploy/aws/.env         compose variables (domains)
-    deploy/aws/.state/vercel.env  web vars to paste or import into Vercel
+    .env.vercel             web vars to import into Vercel (repo root)
 
-AGENTS_API_URL, CORS_ORIGINS and FRONTEND_ORIGIN are derived from the flags, so
-the placeholders in .env.deploy never reach a service.
+AGENTS_API_URL, CORS_ORIGINS and FRONTEND_ORIGIN are derived from the flags.
 """
 import argparse
 import json
@@ -70,7 +69,7 @@ def main() -> None:
     write(HERE / "agents.env", {k: v for k, v in env.items() if AGENTS.match(k)})
     write(HERE / "backend.env", {k: v for k, v in env.items() if BACKEND.match(k)})
     write(HERE / ".env", {"AGENTS_DOMAIN": a.agents_domain, "BACKEND_DOMAIN": a.backend_domain})
-    write(HERE / ".state" / "vercel.env", {k: v for k, v in env.items() if WEB.match(k)})
+    write(ROOT / ".env.vercel", {k: v for k, v in env.items() if WEB.match(k)})
 
 
 if __name__ == "__main__":

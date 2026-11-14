@@ -14,6 +14,8 @@ const MAINNET_FIXTURES = path.join(REPO, "fixtures/mainnet");
 const LISTS = ["hackers.txt", "us-ofac.txt", "eu.txt", "uk.txt", "un.txt", "ch-seco.txt"];
 /** Live fetch budget: ~6.5 s per call on NearBlocks' free tier. */
 const LIVE_MAX_CALLS = Number(process.env.CHECK_LIVE_MAX_CALLS ?? 15);
+// A live trace is up to ~15 NearBlocks calls at ~6.5 s each, plus rate-limit backoff.
+export const maxDuration = 300;
 const ACCOUNT_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
 
 export async function POST(req: Request) {
