@@ -3,8 +3,8 @@
 /* NIXO design system.
    Palette: Black #000000 · Deep Blue #191D32 · White #FFFFFF · Accent Yellow #D4FE08,
    plus one blue gradient used sparingly behind panels.
-   Pixel-fused shapes, hairline grids, tight grotesk headlines with an italic serif
-   for emphasis. Green and red only where they carry meaning (clean / rejected). */
+   Pixel-fused shapes, hairline grids, tight grotesk headlines.
+   Green and red only where they carry meaning (clean / rejected). */
 :root {
   color-scheme: dark;
 
@@ -75,7 +75,6 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-grotesk);
-  --font-serif: var(--font-serif-italic);
 
   /* Crisp, near-square corners everywhere. */
   --radius-sm: 2px;
@@ -127,14 +126,6 @@ body {
   font-family: var(--font-michroma), var(--font-grotesk), sans-serif;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-}
-
-/* Italic serif for emphasis, like the "Primary / Accent / Gradient" labels. */
-.serif {
-  font-family: var(--font-serif-italic), Georgia, serif;
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.01em;
 }
 
 /* Blue gradient fill. */
