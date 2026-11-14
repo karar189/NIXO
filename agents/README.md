@@ -39,7 +39,7 @@ adapter (`adapter.py`) and a frozen market snapshot.
 - `GET /nixo/runs/{id}/audit`: audit trail
 - `POST /nixo/runs/{id}/revoke`, `POST /nixo/runs/{id}/attempt`: owner console
 - `GET /nixo/assets`: every token NEAR Intents (1Click) can route, as `SYMBOL@chain` codes grouped by chain
-- `GET /nixo/defaults`: default run config and the real/simulated/stub labels
+- `GET /nixo/defaults`: default run config and the execution/provenance/enforcement labels
 
 **Multi-token and cross-chain.** The task is a target portfolio of up to 4 assets (any
 1Click token, e.g. `NEAR@near`, `ETH@eth`, `SOL@sol`); agents always spend `USDC@near`.

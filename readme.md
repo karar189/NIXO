@@ -169,10 +169,10 @@ printf '{"account":"nixo-alice.testnet"}' | wasmtime run target/wasm32-wasip2/re
 NIXO is also exploring capital that an owner assigns to an AI agent, with a provenance record and permissions enforced at the transaction boundary instead of in the agent's prompt. v0.1 is a controlled experiment, specified in [Nixo_agents.md](Nixo_agents.md): two agents get the same task, the same model and equivalent capital. **Agent B** trades through a policy vault that checks every request; **Agent A** is the unrestricted baseline.
 
 - **Task:** build a target portfolio of up to 4 assets from a `USDC@near` allocation. Assets are `SYMBOL@chain` codes (`NEAR@near`, `ETH@eth`, `SOL@sol`, ...) for any token NEAR Intents 1Click can route, across chains.
-- **Agent B's policy:** per-trade and total-spend caps, swaps only, allowed tokens, **allowed chains**, and **recipient pinning** (cross-chain output stays in the vault or goes to the owner's pinned address on that chain). The vault also checks the assignment, revocation, agent identity and replays, and reserves spend atomically.
+- **Agent B's policy:** per-trade and total-spend caps, swaps only, allowed tokens, **allowed chains**, and **recipient pinning** (swap output stays in the vault or goes to the owner's pinned address on its chain). The vault also checks the assignment, revocation, agent identity and replays, and reserves spend atomically.
 - **Adversarial suite:** 17 tests, t01–t14 from the spec plus the cross-chain t15–t17 (attacker recipient, forbidden chain, pinned payout), each mirrored on Agent A where it applies. At the end the owner revokes B and B's next request is rejected.
-- **Owner console:** revoke Agent B at any time, including mid-run; once the run finishes, send your own swap or withdraw requests as either agent.
-- **Market:** *recorded* (default) prices assets from Binance bars (flat at the 1Click spot price when there is no history) and checks each task asset with a 1Click dry quote first. *Synthetic* is deterministic and accepts any 1Click code (codes outside the built-in offline list are looked up in the live catalogue); its prices stay synthetic.
+- **Owner console:** revoke Agent B during or after a run; once the run finishes, send your own swap or withdraw requests as either agent.
+- **Market:** *recorded* (default) prices assets from Binance bars (flat at the 1Click spot price when there is no history) and checks each task asset with a 1Click dry quote first. *Synthetic* uses seeded random-walk prices and accepts any 1Click code: a code outside the built-in offline list is resolved against the live catalogue, but prices stay synthetic.
 
 **Where:** `/dashboard/agents` (wallet sign-in; runs belong to the connected account). **Settings → AI model providers** (`/dashboard/settings`) shows which providers are configured and tests each one. The agents service serves the experiment under `/nixo` and provider status under `/llm`; the endpoints are listed in [agents/README.md](agents/README.md).
 
@@ -229,7 +229,7 @@ nixo/
 | Encrypting the session to the enclave key | Not in MVP (no history leaves the enclave because none enters through public input) |
 | Chain Signatures cross-chain relayer | Not built, v2 |
 | Exchange `/verify` page | Real, calls `is_clean` live |
-| Agents & vaults: enforcement | **Off-chain**: the vault's checks and accounting are real code, but they run inside the agents service and its audit events are service logs, not on-chain proof. A NEAR contract is the next step |
+| Agents & vaults: enforcement | **Off-chain**: the vault's checks and accounting are real code, but they run inside the agents service, and audit events are service logs, not on-chain proof. Moving them into a NEAR contract is the next step |
 | Agents & vaults: execution | **Simulated**: both agents fill on a shared paper adapter against a frozen market snapshot; no funds move. Recorded mode uses Binance prices and live 1Click route and cost checks; cross-chain "delivered" means the vault would have released it |
 | Agents & vaults: provenance | **Stub**: each deposit gets its own provenance record, but its verification status comes from a demo stub, not source-of-funds checks |
 | Agents & vaults: run store | **In memory**: the last 20 runs per account, one running at a time, lost when the agents service restarts. Runs are scoped by an unsigned `X-Near-Account` header; signed (NEP-413) auth is next |
