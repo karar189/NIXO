@@ -22,6 +22,8 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
       "/dashboard/agents": "Agents & vaults",
       "/dashboard/settings": "Settings",
       "/dashboard/privacy": "Privacy",
+      "/dashboard/solver": "Privacy",
+      "/dashboard/clean-funds": "Privacy",
     }[pathname] ?? "Overview";
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -67,7 +69,7 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
           <Menu className="size-5" />
         </button>
         <nav aria-label="Breadcrumb">
-          <span className="display text-[12px] tracking-[0.14em] text-foreground">{title}</span>
+          <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted"><span>NIXO</span><span aria-hidden>/</span><span className="text-foreground">{title}</span></span>
         </nav>
       </div>
 

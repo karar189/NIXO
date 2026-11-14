@@ -85,6 +85,38 @@
   --radius-3xl: 18px;
 }
 
+/* Dashboard panels: hairline border, flat surface, near-square corners. */
+.panel {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+}
+
+/* Seamless bordered grid (Monad "ws-dash" seams): children share hairlines. */
+.seam-grid {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+.seam-grid > * {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: -1px -1px 0 0 var(--line);
+}
+
+/* Activity heatmap levels: periwinkle → accent yellow steps. */
+.heat { background: var(--viz-grid); }
+.heat-1 { background: color-mix(in srgb, var(--accent-2) 35%, var(--viz-grid)); }
+.heat-2 { background: color-mix(in srgb, var(--accent-2) 75%, var(--viz-grid)); }
+.heat-3 { background: color-mix(in srgb, var(--accent) 60%, var(--accent-2)); }
+.heat-4 { background: var(--accent); }
+
+.grid-cols-24 { grid-template-columns: repeat(24, minmax(0, 1fr)); }
+
 html {
   scroll-behavior: smooth;
 }

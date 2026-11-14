@@ -16,6 +16,8 @@ import { CertificateCard } from "@/components/CertificateCard";
 import { NearAiVerifiedPanel } from "@/components/NearAiVerifiedPanel";
 import { MockTag } from "@/components/MockTag";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { PageHeader, Tag } from "@/components/dashboard/ui";
+import { Card } from "@/components/dashboard/Card";
 import { mockSolve, type MockFillResult } from "@/lib/solver/mock-solver";
 import type { AttestationCheck } from "@/lib/nearai";
 
@@ -245,119 +247,142 @@ export default function PrivacyPage() {
       : "Prove my funds with this wallet";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-10 px-4 py-8 sm:px-6">
-      <header>
-        <p className="kicker">Privacy · certificate · Private AI · solver gate</p>
-        <h1 className="display mt-3 text-[clamp(1.3rem,2.6vw,1.9rem)] leading-snug">Privacy</h1>
-        <p className="mt-3 text-muted">
-          Clean-funds certificates, TEE compliance notes on NEAR AI Cloud, and a fail-closed mock solver that only fills
-          when <span className="font-mono text-xs">is_clean</span> is true — without retaining prompts or history on our
-          servers.
-        </p>
-      </header>
+    <div className="mx-auto max-w-[1400px] space-y-6 px-4 py-6 sm:px-6 lg:py-8">
+      <PageHeader
+        kicker="Privacy · certificate · Private AI · solver gate"
+        title="Privacy"
+        description={
+          <>
+            Clean-funds certificates, TEE compliance notes on NEAR AI Cloud, and a fail-closed mock solver that only fills when{" "}
+            <span className="font-mono text-xs">is_clean</span> is true — without retaining prompts or history on our servers.
+          </>
+        }
+      />
+
+      <nav aria-label="Sections" className="sticky top-0 z-20 border-y border-line bg-background/90 py-2.5 backdrop-blur-md">
+        <ul className="flex flex-wrap gap-1 font-mono text-[11px] uppercase tracking-[0.14em]">
+          {[
+            ["#clean-funds", "01", "Clean funds"],
+            ["#private-ai", "02", "Private AI"],
+            ["#solver", "03", "Mock solver"],
+          ].map(([href, n, t]) => (
+            <li key={href}>
+              <a
+                href={href}
+                className="inline-flex items-center gap-2 px-2.5 py-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                <span className="text-accent">{n}</span>
+                {t}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       {/* —— Clean funds —— */}
-      <div id="clean-funds" className="scroll-mt-24 space-y-8">
-        <section>
+      <div id="clean-funds" className="scroll-mt-24 space-y-6">
+        <section className="max-w-3xl">
           <p className="kicker">Clean funds · NIXO certificate</p>
           <h2 className="display mt-3 text-xl leading-snug sm:text-2xl">
             Prove your money is clean without proving where it&apos;s been.
           </h2>
-          <p className="mt-3 text-muted">
+          <p className="mt-3 text-sm leading-6 text-muted">
             A sealed Intel TDX enclave screens history against sanctions and hacker lists and outputs only a verdict.
             NEAR records it as a 7-day certificate any exchange can check with one call.
           </p>
         </section>
 
-        <section id="wallet" className="scroll-mt-24 rounded-xl border border-accent/40 bg-surface p-5">
-          <div className="text-sm font-medium">Your wallet</div>
-          <p className="mt-1 text-sm text-muted">
-            This opens your NEAR wallet to sign <span className="font-mono">request_nixo</span> on {NIXO_CONTRACT} (~
-            {NIXO_REQUEST_DEPOSIT_NEAR} NEAR deposit for the TEE run).
-          </p>
-          {accountId ? (
-            <p className="mt-3 font-mono text-sm text-accent-2">{accountId}</p>
-          ) : (
-            <p className="mt-3 text-sm text-muted">No wallet connected yet.</p>
-          )}
-          <p className="mt-3 text-xs text-muted">
-            <MockTag>MVP</MockTag> The enclave only has fixture histories for Alice and Mallory. A random wallet usually
-            can&apos;t be processed (lack of history) — that still proves the real sign → TEE → certificate path.
-          </p>
-          <button
-            type="button"
-            onClick={runWallet}
-            disabled={busy}
-            className="mt-4 w-full rounded-lg bg-accent px-4 py-3 font-medium text-accent-ink disabled:opacity-50"
-          >
-            {walletButtonLabel}
-          </button>
-          {mode === "wallet" && txHash && (
-            <a
-              className="mt-2 block text-xs text-muted underline"
-              href={`${EXPLORER}/txns/${txHash}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              transaction {txHash.slice(0, 10)}…
-            </a>
-          )}
-          {mode === "wallet" && error && <p className="mt-3 text-sm text-reject">{error}</p>}
-        </section>
-
-        <section id="demo" className="scroll-mt-24 rounded-xl border border-border bg-surface p-5">
-          <div className="text-sm font-medium">Judge demo (no wallet)</div>
-          <p className="mt-1 text-sm text-muted">
-            Server-signs as a pre-seeded account so judges can get a Clean or Rejected certificate without connecting.
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {DEMO_ACCOUNTS.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => setWho(a.id)}
-                disabled={busy}
-                className={`rounded-lg border p-3 text-left ${who === a.id ? "border-accent ring-1 ring-accent" : "border-border"}`}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section id="wallet" className="scroll-mt-24 panel !border-accent/40 p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-medium">Your wallet</div>
+              <Tag tone="accent">live · signs on-chain</Tag>
+            </div>
+            <p className="mt-1 text-sm text-muted">
+              This opens your NEAR wallet to sign <span className="font-mono">request_nixo</span> on {NIXO_CONTRACT} (~
+              {NIXO_REQUEST_DEPOSIT_NEAR} NEAR deposit for the TEE run).
+            </p>
+            {accountId ? (
+              <p className="mt-3 font-mono text-sm text-accent-2">{accountId}</p>
+            ) : (
+              <p className="mt-3 text-sm text-muted">No wallet connected yet.</p>
+            )}
+            <p className="mt-3 text-xs text-muted">
+              <MockTag>MVP</MockTag> The enclave only has fixture histories for Alice and Mallory. A random wallet usually
+              can&apos;t be processed (lack of history) — that still proves the real sign → TEE → certificate path.
+            </p>
+            <button type="button" onClick={runWallet} disabled={busy} className="btn-primary mt-4 w-full">
+              {walletButtonLabel}
+            </button>
+            {mode === "wallet" && txHash && (
+              <a
+                className="mt-2 block text-xs text-muted underline"
+                href={`${EXPLORER}/txns/${txHash}`}
+                target="_blank"
+                rel="noreferrer"
               >
-                <div className="font-mono text-sm">{a.label}</div>
-                <div className="text-xs text-muted">{a.note}</div>
-              </button>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted">
-            <MockTag>simulated</MockTag> History for these two accounts is compiled into the checker WASM, not a live
-            1Click read.
-          </p>
-          <button
-            type="button"
-            onClick={runDemo}
-            disabled={busy}
-            className="mt-4 w-full rounded-lg border border-border bg-background px-4 py-3 font-medium hover:border-accent disabled:opacity-50"
-          >
-            {busy && mode === "demo"
-              ? phase === "sending"
-                ? "Sending request…"
-                : `Checking in sealed enclave… ${elapsed}s`
-              : `Run demo as ${who === "alice" ? "Alice" : "Mallory"}`}
-          </button>
-          {mode === "demo" && txHash && (
-            <a
-              className="mt-2 block text-xs text-muted underline"
-              href={`${EXPLORER}/txns/${txHash}`}
-              target="_blank"
-              rel="noreferrer"
+                transaction {txHash.slice(0, 10)}…
+              </a>
+            )}
+            {mode === "wallet" && error && <p className="mt-3 text-sm text-reject">{error}</p>}
+          </section>
+
+          <section id="demo" className="scroll-mt-24 panel p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-medium">Judge demo (no wallet)</div>
+              <Tag tone="mock">server-signed</Tag>
+            </div>
+            <p className="mt-1 text-sm text-muted">
+              Server-signs as a pre-seeded account so judges can get a Clean or Rejected certificate without connecting.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {DEMO_ACCOUNTS.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setWho(a.id)}
+                  disabled={busy}
+                  className={`rounded border p-3 text-left transition-colors ${who === a.id ? "border-accent bg-accent/10" : "border-line hover:border-muted"}`}
+                >
+                  <div className="font-mono text-sm">{a.label}</div>
+                  <div className="text-xs text-muted">{a.note}</div>
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-muted">
+              <MockTag>simulated</MockTag> History for these two accounts is compiled into the checker WASM, not a live
+              1Click read.
+            </p>
+            <button
+              type="button"
+              onClick={runDemo}
+              disabled={busy}
+              className="btn-secondary mt-4 w-full disabled:opacity-50"
             >
-              transaction {txHash.slice(0, 10)}…
-            </a>
-          )}
-          {mode === "demo" && error && <p className="mt-3 text-sm text-reject">{error}</p>}
-        </section>
+              {busy && mode === "demo"
+                ? phase === "sending"
+                  ? "Sending request…"
+                  : `Checking in sealed enclave… ${elapsed}s`
+                : `Run demo as ${who === "alice" ? "Alice" : "Mallory"}`}
+            </button>
+            {mode === "demo" && txHash && (
+              <a
+                className="mt-2 block text-xs text-muted underline"
+                href={`${EXPLORER}/txns/${txHash}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                transaction {txHash.slice(0, 10)}…
+              </a>
+            )}
+            {mode === "demo" && error && <p className="mt-3 text-sm text-reject">{error}</p>}
+          </section>
+        </div>
 
         {view && (
           <section className="space-y-4">
             <CertificateCard view={view} />
-            <div className="rounded-xl border border-border bg-surface p-5 text-sm">
-              <div className="font-medium">Compliance note</div>
+            <Card title="Compliance note" tag="NEAR AI Cloud · TEE" className="text-sm">
               {!explain && <p className="mt-2 text-muted">Generating with NEAR AI Cloud…</p>}
               {explain?.text && <p className="mt-2 whitespace-pre-wrap">{explain.text}</p>}
               {explain?.error && <p className="mt-2 text-muted">{explain.error}</p>}
@@ -370,7 +395,7 @@ export default function PrivacyPage() {
                   . Nothing retained server-side after this response.
                 </p>
               )}
-            </div>
+            </Card>
             {explain?.checks && explain.model && explain.nonce && (
               <NearAiVerifiedPanel
                 model={explain.model}
@@ -380,22 +405,24 @@ export default function PrivacyPage() {
                 completionId={explain.completion_id}
               />
             )}
-            <Link href={`/verify?account=${view.certificate.account}`} className="inline-block text-sm underline">
-              Verify as an exchange →
-            </Link>
-            <a href="#private-ai" className="ml-4 inline-block text-sm underline">
-              Private AI samples →
-            </a>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/verify?account=${view.certificate.account}`} className="btn-secondary !px-4 !py-2 !text-[11px]">
+                Verify as an exchange →
+              </Link>
+              <a href="#private-ai" className="btn-secondary !px-4 !py-2 !text-[11px]">
+                Private AI samples →
+              </a>
+            </div>
           </section>
         )}
       </div>
 
       {/* —— Private AI —— */}
-      <div id="private-ai" className="scroll-mt-24 space-y-6 border-t border-border pt-10">
-        <header className="space-y-3">
+      <div id="private-ai" className="scroll-mt-24 space-y-6 border-t border-line pt-8">
+        <header className="max-w-3xl space-y-3">
           <p className="kicker">Private AI · NEAR AI Cloud</p>
           <h2 className="display text-xl leading-snug sm:text-2xl">Private compliance note</h2>
-          <p className="max-w-2xl text-muted">
+          <p className="text-sm leading-6 text-muted">
             Pick a fictional sample. A TEE-hosted model on{" "}
             <code className="font-mono text-xs">cloud-api.near.ai</code> categorizes / explains it. We fetch an
             attestation report with a fresh random nonce and show what was checked. Nothing is kept server-side after
@@ -413,8 +440,8 @@ export default function PrivacyPage() {
                   key={s.id}
                   type="button"
                   onClick={() => setSample(s.id)}
-                  className={`rounded-xl border px-4 py-3 text-left transition-colors ${
-                    on ? "border-accent bg-accent/10" : "border-border bg-surface hover:border-accent/50"
+                  className={`panel px-4 py-3 text-left transition-colors ${
+                    on ? "!border-accent !bg-accent/10" : "hover:!border-muted"
                   }`}
                 >
                   <div className="text-sm font-medium">{s.title}</div>
@@ -427,7 +454,7 @@ export default function PrivacyPage() {
             type="button"
             onClick={runPrivateAi}
             disabled={paiBusy}
-            className="mt-2 w-full rounded-lg bg-accent px-4 py-3 font-medium text-accent-ink disabled:opacity-50 sm:w-auto"
+            className="btn-primary mt-2 w-full sm:w-auto"
           >
             {paiBusy ? "Running in TEE…" : "Analyze in NEAR AI Cloud"}
           </button>
@@ -436,17 +463,9 @@ export default function PrivacyPage() {
 
         {paiResult && (
           <section className="space-y-4">
-            <div className="rounded-xl border border-border bg-surface p-5">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-medium">Model note</h3>
-                {paiResult.ephemeral && (
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-                    ephemeral · no retention
-                  </span>
-                )}
-              </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{paiResult.text}</p>
-            </div>
+            <Card title="Model note" tag={paiResult.ephemeral ? "ephemeral · no retention" : undefined}>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{paiResult.text}</p>
+            </Card>
             <NearAiVerifiedPanel
               model={paiResult.model}
               nonce={paiResult.nonce}
@@ -468,11 +487,11 @@ export default function PrivacyPage() {
       </div>
 
       {/* —— Mock solver —— */}
-      <div id="solver" className="scroll-mt-24 space-y-6 border-t border-border pt-10">
-        <header className="space-y-2">
+      <div id="solver" className="scroll-mt-24 space-y-6 border-t border-line pt-8">
+        <header className="max-w-3xl space-y-2">
           <p className="kicker">Layer 3 · mock solver</p>
           <h2 className="display text-xl leading-snug sm:text-2xl">Mock solver</h2>
-          <p className="text-sm text-muted">
+          <p className="text-sm leading-6 text-muted">
             Fail-closed gate before fill: only a currently valid Clean certificate is allowed. Missing, expired, warn,
             rejected, and RPC failures all refuse.
           </p>
@@ -481,11 +500,9 @@ export default function PrivacyPage() {
           </p>
         </header>
 
-        <section className="rounded-xl border border-border bg-surface p-5">
-          <div className="text-sm font-medium">Paper intent</div>
-          <p className="mt-1 text-xs text-muted">Origin account · 1 NEAR → USDC (no settlement, no 1Click).</p>
+        <Card title="Paper intent" tag="1 NEAR → USDC" description="Origin account · no settlement, no 1Click. The gate reads is_clean live from nixo.testnet.">
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {DEMO_ACCOUNTS.map((a) => (
               <button
                 key={a.id}
@@ -495,10 +512,10 @@ export default function PrivacyPage() {
                   setSolverResult(null);
                   setSolverError(null);
                 }}
-                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded border px-3 py-1.5 text-sm transition-colors ${
                   solverWho === a.id
                     ? "border-accent bg-accent/10 text-foreground"
-                    : "border-line text-muted hover:border-border hover:text-foreground"
+                    : "border-line text-muted hover:border-muted hover:text-foreground"
                 }`}
               >
                 {a.id === "alice" ? "Alice" : "Mallory"}
@@ -511,7 +528,7 @@ export default function PrivacyPage() {
             type="button"
             onClick={runMockSolver}
             disabled={solverBusy}
-            className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity disabled:opacity-50"
+            className="btn-primary mt-4 self-start !px-4 !py-2 !text-[11px]"
           >
             {solverBusy
               ? "Checking certificate…"
@@ -521,7 +538,7 @@ export default function PrivacyPage() {
           {solverError && <p className="mt-3 text-sm text-reject">{solverError}</p>}
 
           {solverResult?.status === "filled" && (
-            <div className="mt-4 rounded-lg border border-clean/40 bg-clean/5 p-4 text-sm">
+            <div className="mt-4 rounded border border-clean/40 bg-clean-bg p-4 text-sm">
               <p className="font-medium text-clean">Filled (mock)</p>
               <p className="mt-1 font-mono text-xs text-muted">
                 {solverResult.origin} · {solverResult.amount ?? "?"} {solverResult.assetIn ?? "?"} →{" "}
@@ -532,7 +549,7 @@ export default function PrivacyPage() {
           )}
 
           {solverResult?.status === "refused" && (
-            <div className="mt-4 rounded-lg border border-reject/40 bg-reject/5 p-4 text-sm">
+            <div className="mt-4 rounded border border-reject/40 bg-reject-bg p-4 text-sm">
               <p className="font-medium text-reject">Refused</p>
               <p className="mt-1 font-mono text-xs">
                 {solverResult.decision.code}: {solverResult.decision.reason}
@@ -542,7 +559,7 @@ export default function PrivacyPage() {
               </p>
             </div>
           )}
-        </section>
+        </Card>
 
         <p className="text-xs text-muted">
           CLI: <code className="font-mono">pnpm demo:solver</code> · unit tests:{" "}

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { Card } from "@/components/dashboard/Card";
+import { EmptyState, KV, PageHeader, Tag } from "@/components/dashboard/ui";
 import { ModelPicker, usePlannerInfo } from "@/components/llm/ModelPicker";
 import { AgentBrain } from "@/components/agents/AgentBrain";
 import { RunCharts } from "@/components/agents/RunCharts";
@@ -102,22 +103,6 @@ function sourceLabel(src: string): string {
 
 // ---------------------------------------------------------------- small pieces
 
-function Tag({ tone, children, title }: { tone: "clean" | "reject" | "mock" | "warn" | "muted" | "accent"; children: React.ReactNode; title?: string }) {
-  const cls = {
-    clean: "border-clean/40 bg-clean-bg text-clean",
-    reject: "border-reject/40 bg-reject-bg text-reject",
-    mock: "border-mock/40 bg-mock-bg text-mock",
-    warn: "border-amber-300/40 bg-amber-300/10 text-amber-300",
-    muted: "border-line text-muted",
-    accent: "border-accent/40 bg-accent/10 text-accent",
-  }[tone];
-  return (
-    <span title={title} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${cls}`}>
-      {children}
-    </span>
-  );
-}
-
 function OutcomeTag({ o }: { o: Pick<StepOutcome, "status" | "reason"> }) {
   switch (o.status) {
     case "executed":
@@ -139,15 +124,6 @@ function Field({ label, htmlFor, children, hint }: { label: string; htmlFor?: st
       <label htmlFor={htmlFor} className="mb-1.5 block text-xs text-muted">{label}</label>
       {children}
       {hint && <p className="mt-1 text-[11px] text-muted">{hint}</p>}
-    </div>
-  );
-}
-
-function KV({ k, v, mono = true }: { k: string; v: React.ReactNode; mono?: boolean }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-1 text-xs">
-      <dt className="text-muted">{k}</dt>
-      <dd className={`text-right ${mono ? "font-mono" : ""}`}>{v}</dd>
     </div>
   );
 }
@@ -353,7 +329,7 @@ function Progress({ run }: { run: RunSummary }) {
   const idx = PHASES.indexOf(run.phase);
   const failed = run.status === "error"; // phase stays at the one that failed
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface/90 px-4 py-3 text-xs">
+    <div className="panel flex flex-wrap items-center gap-2 px-4 py-3 text-xs">
       {PHASES.map((p, i) => (
         <span key={p} className={`inline-flex items-center gap-1.5 ${i < idx || run.status === "done" ? "text-clean" : i === idx ? (failed ? "text-danger" : "text-accent") : "text-muted"}`}>
           {i < idx || run.status === "done" ? <CheckCircle2 className="size-3.5" /> : i === idx ? (failed ? <XCircle className="size-3.5" /> : <Loader2 className="size-3.5 animate-spin" />) : <CircleDashed className="size-3.5" />}
@@ -923,30 +899,32 @@ export default function AgentsPage() {
   if (!accountId) return null;
 
   return (
-    <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-4 py-6 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="kicker !text-[10px]">Agents &amp; vaults · NIXO v0.1</p>
-          <h1 className="display text-2xl">Verified capital &amp; agent authorization</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+    <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-4 py-6 sm:px-6 lg:py-8">
+      <PageHeader
+        kicker="Agents & vaults · NIXO v0.1"
+        title="Verified capital & agent authorization"
+        description={
+          <>
             Two agents, the same task and equivalent capital. Agent B works through an authorization vault that enforces its
-            owner&apos;s rules at the transaction boundary; Agent A is the unrestricted baseline. Below: on-chain vault
-            gated by <code className="font-mono">is_clean</code>, plus a delayed viewing-key path for the encrypted trade log.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Tag tone="mock">off-chain experiment</Tag>
-          {NIXO_VAULT_CONTRACT ? <Tag tone="clean">on-chain vault · {NIXO_VAULT_CONTRACT}</Tag> : <Tag tone="warn">vault contract unset</Tag>}
-          <Tag tone="accent">delayed viewing key</Tag>
-        </div>
-      </div>
+            owner&apos;s rules at the transaction boundary; Agent A is the unrestricted baseline. Below: on-chain vault gated by{" "}
+            <code className="font-mono">is_clean</code>, plus a delayed viewing-key path for the encrypted trade log.
+          </>
+        }
+        actions={
+          <>
+            <Tag tone="mock">off-chain experiment</Tag>
+            {NIXO_VAULT_CONTRACT ? <Tag tone="clean">on-chain vault · {NIXO_VAULT_CONTRACT}</Tag> : <Tag tone="warn">vault contract unset</Tag>}
+            <Tag tone="accent">delayed viewing key</Tag>
+          </>
+        }
+      />
 
       <OnchainVaultPanel />
       <ViewingKeysPanel runId={runId} />
 
       <SetupCard cfg={cfg} setCfg={setCfg} onRun={run} busy={busy || Boolean(active)} disabled={!account} account={account} />
 
-      {error && <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>}
+      {error && <p role="alert" className="rounded border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>}
 
       {runs.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -954,7 +932,7 @@ export default function AgentsPage() {
           <span className="text-muted">Runs:</span>
           {runs.map((x) => (
             <button key={x.run_id} type="button" onClick={() => setRunId(x.run_id)} aria-pressed={x.run_id === runId}
-              className={`rounded-full border px-2.5 py-1 font-mono text-[11px] ${x.run_id === runId ? "border-accent/50 text-accent" : "border-line text-muted hover:text-foreground"}`}>
+              className={`rounded border px-2.5 py-1 font-mono text-[11px] transition-colors ${x.run_id === runId ? "border-accent/50 bg-accent/10 text-accent" : "border-line text-muted hover:border-muted hover:text-foreground"}`}>
               {time(x.started_at)} · {x.status === "done" ? `${x.adversarial_passed}/${x.adversarial_total}` : x.status}
             </button>
           ))}
@@ -962,17 +940,18 @@ export default function AgentsPage() {
       )}
 
       {!report && !runs.length && (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line py-14 text-sm text-muted">
-          <Bot className="size-6" />
-          Configure the experiment and press Run. A full run with an LLM takes about a minute.
-        </div>
+        <EmptyState
+          icon={<Bot />}
+          title="No experiment runs yet"
+          body="Configure the experiment above and press Run. A full run with an LLM takes about a minute; the rule-based agent is faster."
+        />
       )}
 
       {report && (
         <>
           <Progress run={report} />
           {report.llm?.note && <p className="text-[11px] text-amber-300">{report.llm.note}</p>}
-          {report.error && <p className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-danger">Run failed: {report.error}</p>}
+          {report.error && <p className="rounded border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-danger">Run failed: {report.error}</p>}
           {events && report.agents.agent_b.assignment && (
             <>
               <Card title="Inside the run · how the agents decide and what the vault does">

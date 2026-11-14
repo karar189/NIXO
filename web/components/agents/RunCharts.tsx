@@ -36,7 +36,7 @@ function niceTicks(min: number, max: number, n = 4): number[] {
 
 function ChartCard({ title, subtitle, legend, children }: { title: string; subtitle?: string; legend?: ReactNode; children: ReactNode }) {
   return (
-    <section className="flex flex-col rounded-2xl border border-line bg-surface/90 p-5">
+    <section className="flex flex-col panel p-5">
       <header className="mb-3">
         <h3 className="text-sm font-medium">{title}</h3>
         {subtitle && <p className="mt-0.5 text-[11px] leading-5 text-muted">{subtitle}</p>}
