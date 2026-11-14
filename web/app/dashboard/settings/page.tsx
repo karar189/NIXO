@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { Card } from "@/components/dashboard/Card";
+import { ProvidersPanel } from "@/components/llm/ModelPicker";
 import type { NearNetwork } from "@/lib/near/config";
 
 function NetworkSwitch({
@@ -117,6 +118,14 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+      </Card>
+
+      <Card title="AI model providers">
+        <p className="mb-3 text-sm leading-6 text-muted">
+          The trading planner, position supervisor and NIXO experiment agents can use any configured provider.
+          &ldquo;Auto&rdquo; tries them in this order and skips one for 10 minutes after an auth or credit failure.
+        </p>
+        <ProvidersPanel />
       </Card>
     </div>
   );

@@ -1,21 +1,19 @@
 """Strategy planner and position supervisor.
 
-Claude picks one strategy from the regime shortlist plus its parameters and
-explains the choice. Without credentials, or if the call fails or is refused,
-a deterministic rule-based planner produces the same shape so the engine
-always has a plan.
+An LLM (Claude, OpenAI, DeepSeek, NVIDIA NIM or NEAR AI — see app.llm) picks
+one strategy from the regime shortlist plus its parameters and explains the
+choice. "auto" walks the configured providers in order. Without credentials,
+or if every provider fails or refuses, a deterministic rule-based planner
+produces the same shape so the engine always has a plan.
 """
 
 import json
 import logging
-import os
-from pathlib import Path
 from typing import Literal
 
-import anthropic
 from pydantic import BaseModel, Field
 
-from app.config import settings
+from app import llm
 from app.trading.signals import BOUNDED
 
 log = logging.getLogger(__name__)
@@ -60,8 +58,11 @@ class PlanResult(BaseModel):
     strategy_plan: StrategyPlan
     analysis_paragraph: str
     quant_algo_description: str
-    planner: Literal["claude", "rules"]
+    # "rules" or the provider that produced the plan (anthropic, openai, deepseek, nvidia, nearai).
+    planner: str
+    planner_model: str | None = None
     planner_note: str | None = None
+    planner_attempts: list[dict] = Field(default_factory=list)
 
 
 class SupervisorDecision(BaseModel):
@@ -70,40 +71,7 @@ class SupervisorDecision(BaseModel):
 
 
 def llm_available() -> bool:
-    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
-        return True
-    return (Path.home() / ".config" / "anthropic").exists()
-
-
-_client: anthropic.AsyncAnthropic | None = None
-
-
-def _anthropic() -> anthropic.AsyncAnthropic:
-    global _client
-    if _client is None:
-        _client = anthropic.AsyncAnthropic(timeout=settings.llm_timeout_seconds)
-    return _client
-
-
-async def _structured_call(prompt: str, schema: dict, max_tokens: int) -> dict:
-    """One Claude call constrained to `schema`; raises on refusal or bad output."""
-    response = await _anthropic().beta.messages.create(
-        model=settings.anthropic_model,
-        max_tokens=max_tokens,
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
-        output_config={"effort": "low", "format": {"type": "json_schema", "schema": schema}},
-        messages=[{"role": "user", "content": prompt}],
-    )
-    if response.stop_reason == "refusal":
-        category = response.stop_details.category if response.stop_details else None
-        raise RuntimeError(f"Claude declined the request ({category or 'no category'})")
-    if response.stop_reason == "max_tokens":
-        raise RuntimeError("Claude's answer was cut off")
-    text = next((b.text for b in response.content if b.type == "text"), None)
-    if text is None:
-        raise RuntimeError("Claude returned no text")
-    return json.loads(text)
+    return llm.any_available()
 
 
 # ---------------------------------------------------------------- planning
@@ -169,11 +137,11 @@ def _plan_prompt(summary: dict, candidates: list[str], risk: RiskProfile, margin
 
 async def make_plan(*, summary: dict, candidates: list[str], risk: RiskProfile, margin: float,
                     leverage: float, indicators: list[str], recent_candles: list[list[float]],
-                    provider: str) -> PlanResult:
+                    provider: str, model: str | None = None) -> PlanResult:
     if provider == "rules":
         return rules_plan(summary, candidates, risk)
     if not llm_available():
-        return rules_plan(summary, candidates, risk, note="No Anthropic credentials configured; used the rule-based planner.")
+        return rules_plan(summary, candidates, risk, note="No LLM provider key configured; used the rule-based planner.")
 
     schema = {
         "type": "object",
@@ -190,40 +158,45 @@ async def make_plan(*, summary: dict, candidates: list[str], risk: RiskProfile, 
     }
     prompt = _plan_prompt(summary, candidates, risk, margin, leverage, indicators, recent_candles)
     try:
-        data = await _structured_call(prompt, schema, max_tokens=4000)
+        result = await llm.structured(prompt, schema, max_tokens=8000, preferred=provider, model=model,
+                                      name="strategy_plan")
+    except llm.LLMUnavailable as err:
+        plan = rules_plan(summary, candidates, risk, note=f"No LLM produced a usable plan ({err}); used the rule-based planner.")
+        plan.planner_attempts = err.attempts
+        return plan
+    except ValueError as err:  # unknown provider name
+        return rules_plan(summary, candidates, risk, note=f"{err}; used the rule-based planner.")
+
+    data = result.data
+    try:
         plan = StrategyPlan(
             strategy=data["strategy"] if data["strategy"] in candidates else candidates[0],
             lookback=int(min(max(data["lookback"], 5), 50)),
             threshold=float(min(max(data["threshold"], 0.00005), 1.0)),
             max_loss_pct=float(min(max(data["max_loss_pct"], 0.005), 0.05)),
         )
-        return PlanResult(
-            strategy_plan=plan,
-            analysis_paragraph=data["analysis_paragraph"],
-            quant_algo_description=data["quant_algo_description"],
-            planner="claude",
-        )
-    except anthropic.AuthenticationError:
-        return rules_plan(summary, candidates, risk, note="Anthropic credentials were rejected; used the rule-based planner.")
-    except anthropic.RateLimitError:
-        return rules_plan(summary, candidates, risk, note="Claude is rate limited right now; used the rule-based planner.")
-    except anthropic.APIStatusError as err:
-        log.warning("Planner API error %s (request %s)", err.status_code, err.request_id)
-        return rules_plan(summary, candidates, risk, note=f"Claude API error {err.status_code}; used the rule-based planner.")
-    except anthropic.APIConnectionError:
-        return rules_plan(summary, candidates, risk, note="Couldn't reach Claude; used the rule-based planner.")
-    except (RuntimeError, ValueError, KeyError, TypeError) as err:
+    except (KeyError, TypeError, ValueError) as err:
         return rules_plan(summary, candidates, risk, note=f"Planner output unusable ({err}); used the rule-based planner.")
+    return PlanResult(
+        strategy_plan=plan,
+        analysis_paragraph=data["analysis_paragraph"],
+        quant_algo_description=data["quant_algo_description"],
+        planner=result.provider,
+        planner_model=result.model,
+        planner_note=llm.attempt_note(result.attempts),
+        planner_attempts=result.attempts,
+    )
 
 
 # ---------------------------------------------------------------- supervisor
 
 
 async def supervise(*, symbol: str, side: str, entry: float, mark: float, pnl: float, roe_pct: float,
-                    strategy: str, tp: float | None, sl: float | None, dynamic: bool) -> SupervisorDecision:
-    """Ask Claude whether to keep, close, or re-level an open position."""
+                    strategy: str, tp: float | None, sl: float | None, dynamic: bool,
+                    provider: str = "auto", model: str | None = None) -> SupervisorDecision:
+    """Ask the LLM whether to keep, close, or re-level an open position."""
     if not llm_available():
-        return SupervisorDecision(action="KEEP", reasoning="Supervisor offline (no Anthropic credentials).")
+        return SupervisorDecision(action="KEEP", reasoning="Supervisor offline (no LLM provider configured).")
     schema = {
         "type": "object",
         "properties": {
@@ -242,10 +215,12 @@ async def supervise(*, symbol: str, side: str, entry: float, mark: float, pnl: f
         "Give one or two sentences of reasoning."
     )
     try:
-        data = await _structured_call(prompt, schema, max_tokens=1500)
-        decision = SupervisorDecision(**data)
-        if decision.action == "ADJUST_TP_SL" and not dynamic:
-            return SupervisorDecision(action="KEEP", reasoning=decision.reasoning + " (adjust ignored in fixed mode)")
-        return decision
-    except (anthropic.APIError, RuntimeError, ValueError, KeyError, TypeError) as err:
+        result = await llm.structured(prompt, schema, max_tokens=4000, preferred=provider, model=model,
+                                      name="supervisor_decision")
+        decision = SupervisorDecision(**result.data)
+    except (llm.LLMUnavailable, ValueError, KeyError, TypeError) as err:
         return SupervisorDecision(action="KEEP", reasoning=f"Supervisor unavailable: {err}")
+    who = llm.LABELS.get(result.provider, result.provider)
+    if decision.action == "ADJUST_TP_SL" and not dynamic:
+        return SupervisorDecision(action="KEEP", reasoning=f"[{who}] {decision.reasoning} (adjust ignored in fixed mode)")
+    return SupervisorDecision(action=decision.action, reasoning=f"[{who}] {decision.reasoning}")

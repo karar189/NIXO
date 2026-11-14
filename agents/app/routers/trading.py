@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.config import settings
+from app import llm
 from app.trading import market_data, oneclick, planner
 from app.trading.engine import EngineError, ManualOrder, SessionConfig, engine
 from app.trading.markets import MARKETS, get_market
@@ -73,7 +73,15 @@ async def preview(body: PreviewBody) -> dict:
 
 @router.get("/planner")
 def planner_info() -> dict:
-    return {"llm_available": planner.llm_available(), "model": settings.anthropic_model}
+    providers = llm.status()
+    first = next((p for p in providers if p["configured"] and not p["cooldown"]), None)
+    return {
+        "llm_available": planner.llm_available(),
+        # What "auto" would try first right now.
+        "provider": first["name"] if first else None,
+        "model": first["default_model"] if first else None,
+        "providers": providers,
+    }
 
 
 @router.post("/analyze")

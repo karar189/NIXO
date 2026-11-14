@@ -33,6 +33,18 @@
   --mock-bg: #161a36;
   --warn: #d4fe08;
   --warn-bg: #1f2400;
+
+  /* Data-viz series (agents page). Darker steps of accent-2 / accent so both sit in
+     the dark-mode lightness band; validated as a pair against --surface (CVD ΔE 31). */
+  --viz-a: #6977ea; /* Agent A · baseline */
+  --viz-b: #86a200; /* Agent B · constrained */
+  /* Asset slots for the portfolio-mix bar (validated as adjacent segments on --surface). */
+  --viz-asset-1: #3987e5;
+  --viz-asset-2: #d95926;
+  --viz-asset-3: #199e70;
+  --viz-asset-4: #c98500;
+  --viz-grid: #161a30;
+  --viz-axis: #262c4a;
 }
 
 @theme inline {
@@ -58,6 +70,8 @@
   --color-mock-bg: var(--mock-bg);
   --color-warn: var(--warn);
   --color-warn-bg: var(--warn-bg);
+  --color-viz-a: var(--viz-a);
+  --color-viz-b: var(--viz-b);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-grotesk);
@@ -291,4 +305,16 @@ html body #near-wallet-selector-modal .dark-theme .nws-modal .selected-wallet {
   *::after {
     transition: none !important;
   }
+}
+
+/* Agents page: the model's neural mesh shimmers. Off for reduced motion. */
+@keyframes brain-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.brain-node {
+  animation: brain-pulse 3.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brain-node { animation: none; opacity: 0.7; }
 }

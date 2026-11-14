@@ -4,7 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # The repo-root .env is shared by all services; a local agents/.env overrides it.
-    model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
+    # env_ignore_empty: an exported-but-empty variable (e.g. KEY= left over from an
+    # older .env that scripts/dev.sh exported) must not mask the value in .env.
+    model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore", env_ignore_empty=True)
 
     app_name: str = "neararc-agents"
     # AGENTS_PORT (was PORT): renamed so it doesn't clash with the backend in the shared .env.
@@ -25,9 +27,38 @@ class Settings(BaseSettings):
     # Recipient used on dry-run (paper) quotes. Dry quotes never move funds.
     paper_quote_account: str = "intents.near"
 
-    # LLM planner. With no ANTHROPIC_API_KEY the rule-based planner is used.
+    # ------------------------------------------------------------ LLM providers
+    # Each provider is enabled when its key is set. With none, the rule-based
+    # planner is used. Keys are read from the root .env into these fields and
+    # passed to clients explicitly, so `uvicorn` works without `pnpm dev`.
+    anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5-5"
+
+    openai_api_key: str | None = None
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_model: str = "gpt-5.4-mini"
+
+    deepseek_api_key: str | None = None
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-flash"
+
+    # NVIDIA NIM (build.nvidia.com): OpenAI-compatible, many hosted models.
+    nvidia_api_key: str | None = None
+    nvidia_api_base: str = "https://integrate.api.nvidia.com/v1"
+    nvidia_model: str = "mistralai/mistral-large-4-1t-a52b"
+
+    # NEAR AI Cloud: OpenAI-compatible.
+    nearai_api_key: str | None = None
+    nearai_base_url: str = "https://cloud-api.near.ai/v1"
+    nearai_model: str = "deepseek-ai/DeepSeek-V3.1"
+
+    # "auto" tries providers in this order and falls through on failure.
+    llm_provider_order: str = "anthropic,openai,deepseek,nvidia,nearai"
     llm_timeout_seconds: float = 90.0
+    # Upper bound for one "auto" call across all fallbacks (the web proxy waits 100 s).
+    llm_auto_budget_seconds: float = 85.0
+    # After an auth/quota failure a provider is skipped by "auto" for this long.
+    llm_cooldown_seconds: float = 600.0
 
 
 settings = Settings()

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Sparkles, X } from "lucide-react";
+import { ModelPicker, usePlannerInfo } from "@/components/llm/ModelPicker";
 import {
   INDICATORS,
+  PROVIDER_SHORT,
   tradingApi,
   type Analysis,
   type Market,
@@ -28,6 +30,7 @@ export const DEFAULT_CONFIG: SessionConfig = {
   poll_seconds: 3,
   supervisor_interval_seconds: 120,
   llm_provider: "auto",
+  llm_model: null,
   indicators: [],
 };
 
@@ -81,14 +84,15 @@ export function AgentSetupModal({
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [llm, setLlm] = useState<boolean | null>(null);
+  const { info: planner, reload: reloadPlanner } = usePlannerInfo();
 
   useEffect(() => {
     if (!open) return;
-    tradingApi.planner().then((p) => setLlm(p.llm_available)).catch(() => setLlm(null));
+    void reloadPlanner();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !loading && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, loading, onClose]);
 
   if (!open) return null;
@@ -216,16 +220,14 @@ export function AgentSetupModal({
 
               <div className="space-y-4">
                 <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Intelligence &amp; execution</p>
-                <Field label="Planner">
-                  <Segmented value={cfg.llm_provider} onChange={(v) => update({ llm_provider: v })}
-                    options={[{ value: "auto", label: "Auto" }, { value: "claude", label: "Claude" }, { value: "rules", label: "Rules" }]} />
-                  <p className="mt-1.5 text-[11px] text-muted">
-                    {llm === false
-                      ? "No Anthropic key on the agents service — the rule-based planner will be used."
-                      : llm
-                        ? "Claude picks the strategy and supervises open positions."
-                        : "Checking planner…"}
-                  </p>
+                <Field label="Planner model (picks the strategy, supervises positions)">
+                  <ModelPicker
+                    idPrefix="cfg-llm"
+                    info={planner}
+                    provider={cfg.llm_provider}
+                    model={cfg.llm_model}
+                    onChange={(llm_provider, llm_model) => update({ llm_provider, llm_model })}
+                  />
                 </Field>
                 <Field label="Position sizing">
                   <Segmented value={cfg.risk_sizing_mode} onChange={(v) => update({ risk_sizing_mode: v })}
@@ -280,9 +282,13 @@ export function AgentSetupModal({
               {analysis && sp && s && !loading && (
                 <>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${analysis.planner === "claude" ? "border-accent/40 text-accent" : "border-line text-muted"}`}>
-                      <Sparkles className="size-3" /> {analysis.planner === "claude" ? "Planned by Claude" : "Rule-based plan"}
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${analysis.planner !== "rules" ? "border-accent/40 text-accent" : "border-line text-muted"}`}>
+                      <Sparkles className="size-3" />{" "}
+                      {analysis.planner !== "rules"
+                        ? `Planned by ${PROVIDER_SHORT[analysis.planner] ?? analysis.planner}`
+                        : "Rule-based plan"}
                     </span>
+                    {analysis.planner_model && <span className="font-mono text-[11px] text-muted">{analysis.planner_model}</span>}
                     <span className="text-muted">{analysis.symbol} · {analysis.timeframe} · {analysis.bar_count} bars</span>
                   </div>
                   {analysis.planner_note && <p className="text-[11px] text-amber-300">{analysis.planner_note}</p>}
@@ -343,6 +349,7 @@ export function AgentSetupModal({
                   ["TP / SL", cfg.tp_sl_mode === "dynamic" ? "Dynamic (ATR)" : `${fmtPct((cfg.tp_pct ?? 0) * 100)} / ${fmtPct(-(cfg.sl_pct ?? analysis.strategy_plan.max_loss_pct) * 100)}`],
                   ["Timeframe", cfg.timeframe],
                   ["Sizing", cfg.risk_sizing_mode.replace("_", " ")],
+                  ["Planner", analysis.planner === "rules" ? "rules" : `${PROVIDER_SHORT[analysis.planner] ?? analysis.planner}`],
                 ].map(([k, v]) => (
                   <div key={k} className="rounded-xl border border-line bg-background/50 p-3">
                     <dt className="text-[10px] uppercase tracking-wider text-muted">{k}</dt>
