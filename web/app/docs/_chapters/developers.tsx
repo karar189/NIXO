@@ -17,14 +17,18 @@ export function DevelopersChapter() {
       <DocSection id="contracts" first>
         <PageHeader kicker="Reference" title="Everything you can call." />
         <Lead>
-          Two contracts on NEAR testnet, a Next.js app with a handful of server routes, and a FastAPI agents service. All
-          amounts on chain are yoctoNEAR strings; all timestamps are nanoseconds as strings.
+          Two contracts live on NEAR mainnet and testnet (same code on both), a copy-trading keys contract, a Next.js app
+          with a handful of server routes, and a FastAPI agents service. All amounts on chain are yoctoNEAR strings; all
+          timestamps are nanoseconds as strings.
         </Lead>
         <SpecTable
           columns={["Account", "Role", "Source"]}
           rows={[
-            ["nixo.testnet", "Certificate contract: pin, OutLayer callback, is_clean", "contract/ (near-sdk 5, Rust 1.95.0)"],
-            ["nixo-vault.testnet", "Deposit vault: is_clean gate, assignments, execute", "vault/"],
+            ["nixo.nixowallet.near (mainnet)", "Certificate contract: pin, OutLayer (outlayer.near) callback, is_clean", "contract/ (near-sdk 5, Rust 1.95.0)"],
+            ["vault.nixowallet.near (mainnet)", "Deposit vault gated on nixo.nixowallet.near", "vault/"],
+            ["nixo.testnet", "Certificate contract on testnet (same code hash as mainnet)", "contract/"],
+            ["nixo-vault.testnet", "Deposit vault on testnet (same code hash as mainnet)", "vault/"],
+            ["nixo-keys.testnet (not deployed yet)", "Copy-trading keys: listings, paid subscriptions", "copykeys/"],
             ["outlayer.testnet", "OutLayer TEE execution (external)", "—"],
             ["nixo-alice.testnet", "Demo account with a Clean certificate", "fixtures/"],
             ["nixo-mallory.testnet", "Demo account with a Rejected certificate", "fixtures/"],
@@ -33,7 +37,7 @@ export function DevelopersChapter() {
       </DocSection>
 
       <DocSection id="nixo-methods">
-        <SectionHeading eyebrow="nixo.testnet" title="Certificate contract methods." />
+        <SectionHeading eyebrow="nixo.nixowallet.near · nixo.testnet" title="Certificate contract methods." />
         <SpecTable
           columns={["Method", "Kind", "Description"]}
           rows={[
@@ -53,7 +57,7 @@ export function DevelopersChapter() {
       </DocSection>
 
       <DocSection id="vault-methods">
-        <SectionHeading eyebrow="nixo-vault.testnet" title="Vault contract methods." />
+        <SectionHeading eyebrow="vault.nixowallet.near · nixo-vault.testnet" title="Vault contract methods." />
         <SpecTable
           columns={["Method", "Kind", "Description"]}
           rows={[
@@ -75,13 +79,14 @@ export function DevelopersChapter() {
         <SectionHeading
           eyebrow="Events"
           title="NEP-297 style logs you can index."
-          copy="Both contracts log EVENT_JSON:{standard, version: 1.0.0, event, data: [...]}."
+          copy="All three contracts log EVENT_JSON:{standard, version: 1.0.0, event, data: [...]}."
         />
         <SpecTable
           columns={["Standard", "Events"]}
           rows={[
             ["nixo", "nixo_requested · nixo_resolved · nixo_failed · checker_proposed · checker_activated · checker_revoked"],
             ["nixo-vault", "deposit_accepted · deposit_refunded · assigned · revoked · withdrawn · execution_allowed · execution_blocked · execution_rolled_back · trade_hash_committed"],
+            ["nixo-copykeys", "key_listed · key_unlisted · key_purchased"],
           ]}
         />
       </DocSection>
@@ -104,7 +109,7 @@ export function DevelopersChapter() {
         <SectionHeading
           eyebrow="Agents API"
           title="FastAPI service on :8000."
-          copy="Open http://localhost:8000/docs for the live OpenAPI schema. NIXO routes take the caller's account in the X-Near-Account header; that account owns the run."
+          copy="Open http://localhost:8000/docs for the live OpenAPI schema. NIXO routes take the caller's account in the X-Near-Account header; that account owns the run. The hosted service answers only /health publicly; everything else needs the X-Agents-Token the web proxy adds."
         />
         <SpecTable
           columns={["Prefix", "Routes", "Purpose"]}
@@ -115,6 +120,8 @@ export function DevelopersChapter() {
             ["/nixo/viewing", "POST keypair, offer, append, redeem · GET runs/{id}", "Encrypted trade log + delayed viewing keys"],
             ["/intents", "POST quote, deposit · GET status", "1Click proxy for wallet-signed swaps (JWT stays server-side)"],
             ["/trade", "GET markets, ticker/{symbol}, planner, status, logs, statistics, history · POST preview, analyze, start, manual, stop, pause, resume", "Paper desk and trading agents"],
+            ["/trade/live", "GET status · POST challenge", "Live agent: guardrails, balances, NEP-413 start nonce"],
+            ["/copy", "GET config, leaderboard, traders/{id}, traders/{id}/entries, keys/{id}?follower=, me, following · GET/POST mirror", "Copy-trading keys: public cards, encrypted feed, wrapped epoch keys, auto-mirror"],
             ["/llm", "GET providers, models/{provider} · POST ping", "Model provider discovery"],
           ]}
         />
@@ -130,6 +137,9 @@ export function DevelopersChapter() {
             ["solver-gate.ts", "checkIntent, checkAccount · types GateDecision, GateRefuseCode, CertificateLookup"],
             ["solver/mock-solver.ts", "mockSolve · type MockFillResult"],
             ["intents/liveSwap.ts", "Confidential Intents swap helpers: balances, storage, wrap, transfer to deposit address"],
+            ["copykeys/sdk.ts", "buildListKeyCall, buildUnlistCall, buildSubscribeCall, PERIOD_OPTIONS · types Listing, Subscription"],
+            ["copykeys/crypto.ts", "getOrCreateKeypair, unwrapEpochKeys, decryptEntries, verifyChain (WebCrypto X25519 + AES-GCM)"],
+            ["copykeys/api.ts", "copyApi client for /copy · types TraderCard, PublicStats, MirrorConfig"],
           ]}
         />
         <CodeBlock label="gate a deposit in your own app">{`import { isClean, getCertificate } from "@/lib/nixo-sdk";
@@ -142,8 +152,8 @@ if (!(await isClean(sender))) {
 
       <DocSection id="run">
         <SectionHeading eyebrow="Run locally" title="Three services, one command." />
-        <CodeBlock label="setup">{`git clone https://github.com/karar189/nearHack
-cd nearHack
+        <CodeBlock label="setup">{`git clone https://github.com/karar189/NIXO
+cd NIXO
 cp .env.example .env      # one file for every service
 pnpm run setup            # pnpm deps, backend npm ci, agents venv
 pnpm dev                  # web :3000 · agents :8000 · backend :4000`}</CodeBlock>
@@ -156,10 +166,11 @@ pnpm dev                  # web :3000 · agents :8000 · backend :4000`}</CodeBl
             ["pnpm dev:web | dev:agents | dev:backend", "Run one service"],
             ["pnpm demo:solver", "Live Alice / Mallory through the solver gate"],
             ["pnpm build:checker", "Build the certified WASM and print its SHA-256"],
-            ["pnpm build:contract | build:vault", "cargo near build for each contract"],
+            ["pnpm build:contract | build:vault | build:copykeys", "cargo near build for each contract"],
             ["pnpm checker:run <account>", "Run the checker locally in wasmtime"],
             ["scripts/deploy-vault-testnet.sh", "Deploy the vault to testnet"],
             ["scripts/vault-fc-key.sh", "Add the agent's execute-only function-call key"],
+            ["scripts/deploy-copykeys-testnet.sh", "Deploy the copy-trading keys contract, then set NIXO_KEYS_CONTRACT"],
           ]}
         />
       </DocSection>
@@ -169,7 +180,14 @@ pnpm dev                  # web :3000 · agents :8000 · backend :4000`}</CodeBl
         <SpecTable
           columns={["Variable", "Used by", "Purpose"]}
           rows={[
-            ["NEXT_PUBLIC_NIXO_CONTRACT", "web", "Certificate contract (nixo.testnet)"],
+            ["NEXT_PUBLIC_NIXO_CONTRACT", "web", "Certificate contract for the judge demo (nixo.testnet)"],
+            ["NEXT_PUBLIC_NIXO_CONTRACT_MAINNET / _TESTNET", "web", "Certificate contract per network for the toggle (nixo.nixowallet.near / nixo.testnet)"],
+            ["NEXT_PUBLIC_NIXO_VAULT_CONTRACT_MAINNET / _TESTNET", "web", "Vault per network (vault.nixowallet.near / nixo-vault.testnet)"],
+            ["NIXO_CONTRACT / NIXO_VAULT_CONTRACT", "agents", "Contracts the agents service reads"],
+            ["NIXO_KEYS_CONTRACT / NIXO_COPY_EPOCH_SECS / NIXO_COPY_DEMO", "agents", "Copy-trading keys contract, epoch length, labelled demo traders"],
+            ["NIXO_LIVE_ENABLED + NIXO_AGENT_ACCOUNT / _OWNER / _PRIVATE_KEY", "agents", "Live AI agent kill switch, agent account, owner allowed to start it, agent key"],
+            ["NIXO_LIVE_MAX_TRADE_USDC / _DAILY_BUDGET_USDC / _MARKETS / _MAX_DEVIATION_BPS", "agents", "Live agent guardrails"],
+            ["AGENTS_API_TOKEN", "web server, agents", "Shared token the web proxy sends as X-Agents-Token"],
             ["NEXT_PUBLIC_NEAR_NETWORK / NEXT_PUBLIC_NEAR_RPC_URL", "web", "Network and RPC"],
             ["DEMO_ALICE_KEY / DEMO_MALLORY_KEY", "web server", "Judge demo signer keys"],
             ["NIXO_REQUEST_DEPOSIT", "web server", "NEAR attached to request_nixo (default 0.05)"],
@@ -192,6 +210,7 @@ pnpm dev                  # web :3000 · agents :8000 · backend :4000`}</CodeBl
             ["kani", "cargo kani over checker/proofs"],
             ["contract", "nixo.testnet unit tests"],
             ["vault", "Vault unit tests (gate, caps, revoke, rollback, trade hash)"],
+            ["copykeys", "Copy-keys unit tests (listing, exact deposit, extend, self-subscribe, X25519 key)"],
             ["web", "Lint and build"],
             ["agents", "pytest (experiment, viewing keys, routers)"],
             ["backend", "NestJS tests"],
@@ -199,7 +218,7 @@ pnpm dev                  # web :3000 · agents :8000 · backend :4000`}</CodeBl
         />
         <Prose>
           <p>
-            Locally: <C>pnpm test</C> (checker, contract, vault, agents, solver), <C>pnpm test:backend</C>,{" "}
+            Locally: <C>pnpm test</C> (checker, contract, vault, copykeys, agents, solver), <C>pnpm test:backend</C>,{" "}
             <C>pnpm kani</C>.
           </p>
         </Prose>

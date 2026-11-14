@@ -1,7 +1,19 @@
 /** Shared docs links. Plain module (no "use client") so server pages can import the values. */
-export const REPO_URL = "https://github.com/karar189/nearHack";
+export const REPO_URL = "https://github.com/karar189/NIXO";
 export const NIXO_EXPLORER = "https://testnet.nearblocks.io/address/nixo.testnet";
 export const VAULT_EXPLORER = "https://testnet.nearblocks.io/address/nixo-vault.testnet";
+
+const MAINNET_EXPLORER = "https://nearblocks.io/address/";
+const TESTNET_EXPLORER = "https://testnet.nearblocks.io/address/";
+
+/** Explorer link for a NEAR account, picked by its suffix. */
+export function explorerUrl(account: string): string {
+  return (account.endsWith(".testnet") ? TESTNET_EXPLORER : MAINNET_EXPLORER) + account;
+}
+
+/** Hosted backend services (AWS EC2, Docker + Caddy, auto-HTTPS on sslip.io). */
+export const AGENTS_URL = "https://agents.13-235-153-13.sslip.io";
+export const BACKEND_URL = "https://api.13-235-153-13.sslip.io";
 
 /**
  * The docs are one continuous page, so section ids are prefixed by their chapter

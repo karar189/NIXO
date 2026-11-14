@@ -5,6 +5,8 @@ import {
   CandlestickChart,
   ChevronRight,
   CodeXml,
+  Globe,
+  KeyRound,
   Route,
   ScanSearch,
   ShieldCheck,
@@ -28,7 +30,7 @@ const layers = [
     icon: ScanSearch,
     layer: "Layer 1 · creates trust",
     title: "Clean-funds passport",
-    copy: "A pinned Rust checker runs in an OutLayer TEE (Intel TDX), traces up to six hops of fund history and writes a short Clean / Warn / Rejected certificate to nixo.testnet. Never the path.",
+    copy: "A pinned Rust checker runs in an OutLayer TEE (Intel TDX), traces up to six hops of fund history and writes a short Clean / Warn / Rejected certificate on-chain: nixo.nixowallet.near on mainnet, nixo.testnet on testnet. Never the path.",
     href: "#tracer",
     cta: "Read the passport",
   },
@@ -36,7 +38,7 @@ const layers = [
     icon: Vault,
     layer: "Layer 2 · puts trust to work",
     title: "Vault and AI agents",
-    copy: "nixo-vault.testnet accepts a deposit only if is_clean is true at that moment, records provenance per deposit, and lets an AI agent trade it only inside limits the contract enforces.",
+    copy: "vault.nixowallet.near (mainnet) and nixo-vault.testnet accept a deposit only if is_clean is true at that moment, records provenance per deposit, and lets an AI agent trade it only inside limits the contract enforces.",
     href: "#vault",
     cta: "Read the vault",
   },
@@ -52,10 +54,22 @@ const layers = [
 
 const surfaces = [
   {
+    icon: Globe,
+    title: "Live on mainnet",
+    copy: "nixo.nixowallet.near and vault.nixowallet.near run the same code as testnet. Explorer links, code hashes and hosted services.",
+    href: "#deployments",
+  },
+  {
     icon: CandlestickChart,
     title: "Trading desk",
-    copy: "Wallet-signed spot swaps through Confidential Intents (1Click, private-shard settlement) plus a paper desk priced with real dry quotes.",
+    copy: "Wallet-signed spot swaps through Confidential Intents, a paper desk priced with real dry quotes, and an opt-in live AI agent that swaps on mainnet under hard caps.",
     href: "#trading",
+  },
+  {
+    icon: KeyRound,
+    title: "Copy-trading keys",
+    copy: "Sell time-limited access to your agent's encrypted trades. Followers pay on-chain, decrypt in the browser and auto-mirror. Only aggregate PnL is public.",
+    href: "#copy-trading",
   },
   {
     icon: Sparkles,
@@ -140,7 +154,7 @@ export function IntroChapter() {
         <SectionHeading
           eyebrow="Three layers"
           title="The tracer creates trust. The vault uses it. The solver spreads it."
-          copy="Each layer reads the same public call: is_clean(account) on nixo.testnet. Pick the layer you integrate with."
+          copy="Each layer reads the same public call: is_clean(account) on nixo.nixowallet.near (mainnet) or nixo.testnet. Pick the layer you integrate with."
         />
         <div className="mt-9 grid gap-px overflow-hidden border border-line bg-line md:grid-cols-3">
           {layers.map((l) => {
@@ -170,7 +184,7 @@ export function IntroChapter() {
         <SectionHeading
           eyebrow="Product surfaces"
           title="A desk, not just a checker."
-          copy="The web app puts the certificate next to trading, the agent vault and a private AI explainer."
+          copy="The web app puts the certificate next to trading, AI agents, copy trading, the agent vault and a private AI explainer."
         />
         <div className="mt-9 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-2">
           {surfaces.map((s) => {
@@ -193,9 +207,11 @@ export function IntroChapter() {
             ["/verify", "Exchange view: paste an account, read is_clean and the Verified panel.", <StatusPill key="b" status="live" />],
             ["/dashboard/agents", "On-chain vault panel, viewing keys, two-agent adversarial experiment.", <StatusPill key="c" status="live">live + experiment</StatusPill>],
             ["/dashboard/privacy#solver", "Paper fill through the fail-closed gate: Alice filled, Mallory refused.", <StatusPill key="d" status="mock" />],
-            ["/dashboard/trade", "Confidential Intents spot swaps (mainnet) and the paper desk.", <StatusPill key="e" status="live" />],
+            ["/dashboard/trade", "Confidential Intents spot swaps (mainnet), the paper desk and AI agents (paper, or live on mainnet when enabled).", <StatusPill key="e" status="live" />],
+            ["/dashboard/keys", "Copy-trading keys: trader cards, subscribe, decrypt the live feed, auto-mirror (paper).", <StatusPill key="h" status="live">live · contract not deployed</StatusPill>],
+            ["/dashboard/markets · /dashboard/news", "Markets browser with per-symbol pages and a swap panel; aggregated desk news.", <StatusPill key="i" status="live" />],
             ["/dashboard/privacy#private-ai", "NEAR AI Cloud explainer with attestation checks.", <StatusPill key="f" status="live" />],
-            ["/dashboard/settings", "Pick the LLM provider and model for agents.", <StatusPill key="g" status="live" />],
+            ["/dashboard/settings", "Testnet ↔ mainnet toggle and the LLM provider and model for agents.", <StatusPill key="g" status="live" />],
           ]}
         />
       </DocSection>
@@ -263,6 +279,25 @@ export function IntroChapter() {
                 <>
                   <C>/dashboard/agents</C> shows the on-chain vault (deposit gated by <C>is_clean</C>, assign, execute
                   dry-run, revoke, withdraw). <C>/dashboard/privacy#solver</C> fills Alice and refuses Mallory.
+                </>
+              ),
+            },
+            {
+              title: "Read a trader's record",
+              body: (
+                <>
+                  Open <C>/dashboard/keys</C> and pick a demo trader (<C>atlas.nixo-demo</C>). See public PnL, win rate and
+                  drawdown with no symbols or sides; the trades themselves stay encrypted until you subscribe.
+                </>
+              ),
+            },
+            {
+              title: "Check mainnet",
+              body: (
+                <>
+                  Open <a href="https://nearblocks.io/address/nixo.nixowallet.near" target="_blank" rel="noreferrer" className="text-accent underline-offset-4 hover:underline">nixo.nixowallet.near</a> and{" "}
+                  <a href="https://nearblocks.io/address/vault.nixowallet.near" target="_blank" rel="noreferrer" className="text-accent underline-offset-4 hover:underline">vault.nixowallet.near</a>{" "}
+                  on NearBlocks, or flip <C>/dashboard/settings</C> to mainnet. Same contracts, same code hashes as testnet.
                 </>
               ),
             },

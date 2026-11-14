@@ -13,12 +13,14 @@ Built for the **NEAR Hackathon** (window through 14 Nov 2026). Primary track **P
 | **Product requirements** | [`NIXO_PRD.md`](NIXO_PRD.md) (authoritative for scope and privacy language) |
 | **Status / narrative** | [`docs/PRODUCT_SUMMARY.md`](docs/PRODUCT_SUMMARY.md) |
 | **Agents spec** | [`docs/Nixo_agents.md`](docs/Nixo_agents.md) |
-| **In-app docs** | [`/docs`](web/app/docs) at http://localhost:3000/docs |
-| **Verifier (testnet)** | `nixo.testnet` |
-| **Vault (testnet)** | `nixo-vault.testnet` |
-| **Verifier (mainnet)** | `nixo.nixowallet.near` |
-| **Vault (mainnet)** | `vault.nixowallet.near` |
-| **Owner (mainnet)** | `nixowallet.near` · OutLayer `outlayer.near` |
+| **In-app docs** | [`/docs`](web/app/docs) at http://localhost:3000/docs (includes a **Live deployment** chapter) |
+| **Verifier (mainnet, live)** | [`nixo.nixowallet.near`](https://nearblocks.io/address/nixo.nixowallet.near) |
+| **Vault (mainnet, live)** | [`vault.nixowallet.near`](https://nearblocks.io/address/vault.nixowallet.near) |
+| **Owner (mainnet)** | [`nixowallet.near`](https://nearblocks.io/address/nixowallet.near) · OutLayer [`outlayer.near`](https://nearblocks.io/address/outlayer.near) |
+| **Verifier (testnet)** | [`nixo.testnet`](https://testnet.nearblocks.io/address/nixo.testnet) |
+| **Vault (testnet)** | [`nixo-vault.testnet`](https://testnet.nearblocks.io/address/nixo-vault.testnet) |
+| **Agents API (hosted)** | https://agents.13-235-153-13.sslip.io/health |
+| **Source** | https://github.com/karar189/NIXO |
 | **Checker** | `/checker` · version `0.3.0` · hash pinned on-chain |
 | **Kani proofs** | `/checker/proofs` (CI) |
 | **License** | MIT |
@@ -31,6 +33,7 @@ Built for the **NEAR Hackathon** (window through 14 Nov 2026). Primary track **P
 2. [Three layers](#three-layers)
 3. [What we built (product surfaces)](#what-we-built-product-surfaces)
 4. [Judge it in 90 seconds](#judge-it-in-90-seconds)
+   - [Live deployment (mainnet)](#live-deployment-mainnet)
 5. [How the tracer works](#how-the-tracer-works)
 6. [Vault, agents & viewing keys](#vault-agents--viewing-keys)
 7. [Solver gate](#solver-gate)
@@ -111,7 +114,7 @@ The web app is a full **desk**: certificate next to trading, markets, agents, pr
 | Route | What it is |
 |---|---|
 | `/` | Marketing landing — product story, GSAP motion, waitlist, CTAs into the desk |
-| `/docs` | In-app documentation (tracer, vault, trading, solver, private AI, developers, status) |
+| `/docs` | In-app documentation (live deployment, tracer, vault, solver, trading + live agent, copy-trading keys, private AI, developers, status) |
 | `/verify` | **Exchange view** — live `is_clean` / certificate, Verified panel, “Check any wallet” preview |
 | `/private-ai` | Privacy-track surface: ephemeral NEAR AI Cloud TEE note, sample docs, Verified panel |
 | `/dashboard` | Desk overview — KPIs, account, markets snapshot, clean-funds card, agents & trades |
@@ -136,8 +139,8 @@ The web app is a full **desk**: certificate next to trading, markets, agents, pr
 No real funds required for the certificate demo. Two pre-seeded testnet accounts: one clean, one tainted.
 
 ```bash
-git clone https://github.com/<your-org>/nixo
-cd nixo
+git clone https://github.com/karar189/NIXO
+cd NIXO
 cp .env.example .env   # fill demo keys + optional LLM / NearBlocks / NEAR AI keys
 pnpm setup
 pnpm demo              # or: pnpm dev
@@ -153,7 +156,32 @@ Opens `http://localhost:3000`:
 6. **Optional preview.** On `/verify`, **Check any NEAR wallet** traces mainnet accounts (e.g. `farstreet4572.near`) with hop paths — preview only, not certifiable.
 7. **Private AI.** `/private-ai` — fictional samples only; nothing retained server-side after the response.
 
-**Deploy note:** run `scripts/deploy-vault-testnet.sh` before pitching on-chain deposits as live on testnet.
+**Deploy note:** both vaults are deployed (`nixo-vault.testnet`, `vault.nixowallet.near`). `scripts/deploy-vault-testnet.sh` is only needed for your own copy.
+
+### Live deployment (mainnet)
+
+The certificate contract and the vault are live on NEAR mainnet and run **byte-identical code** to testnet (NEAR reports the same code hash for each pair).
+
+| Contract | Mainnet | Testnet | Code hash |
+|---|---|---|---|
+| Certificate / `is_clean` | [`nixo.nixowallet.near`](https://nearblocks.io/address/nixo.nixowallet.near) | [`nixo.testnet`](https://testnet.nearblocks.io/address/nixo.testnet) | `HUxADGErrcc3UTwa8HZdfsPVtstQHGkn91c4QZcqaP1G` |
+| Clean-only vault | [`vault.nixowallet.near`](https://nearblocks.io/address/vault.nixowallet.near) | [`nixo-vault.testnet`](https://testnet.nearblocks.io/address/nixo-vault.testnet) | `9vVAgZmoyVB6Yj7dEuHty1ZnmbrBFULz8W3oSbzR32hp` |
+| Copy-trading keys | not deployed | not deployed (`scripts/deploy-copykeys-testnet.sh`) | — |
+
+Mainnet config (`get_config` on `nixo.nixowallet.near`): owner [`nixowallet.near`](https://nearblocks.io/address/nixowallet.near), OutLayer [`outlayer.near`](https://nearblocks.io/address/outlayer.near), pinned checker `3ebe1fb88671973b15d4106073e356bdc429f4926c4a777be9bca9d74461ed59` (0.3.0), certificate TTL 7 days, checker-change timelock 48 h. The vault's `nixo_contract` is `nixo.nixowallet.near`.
+
+```bash
+near contract call-function as-read-only nixo.nixowallet.near get_config json-args '{}' network-config mainnet now
+near contract call-function as-read-only vault.nixowallet.near get_config json-args '{}' network-config mainnet now
+```
+
+| Hosted service | URL |
+|---|---|
+| Web app | Vercel (landing, `/docs`, `/verify`, `/dashboard/*`) |
+| Agents API (FastAPI) | https://agents.13-235-153-13.sslip.io (only `/health` is public; other routes need the `X-Agents-Token` the web proxy sends) |
+| Waitlist backend (NestJS) | https://api.13-235-153-13.sslip.io |
+
+The judge demo (Alice / Mallory) signs on **testnet**. NEAR Intents has no testnet, so swaps and the live agent always run on mainnet. Deploy files: [`deploy/`](deploy/).
 
 ---
 
@@ -224,7 +252,7 @@ Delayed encrypt / offer / redeem path in the agents service (`agents/app/nixo/vi
 
 Traders sell access to their **agent sessions**; followers pay on-chain, read the trades live and can auto-mirror them. Only aggregate PnL is public.
 
-1. **Trader:** on `/dashboard/trade`, hover **Deploy copy agent**, set a price per period, sign `list_key` on the copy-keys contract ([`copykeys/`](copykeys/)).
+1. **Trader:** on `/dashboard/trade`, hover **Deploy copy agent**, set a price per period, sign `list_key` on the copy-keys contract ([`copykeys/`](copykeys/)). The contract is built and unit-tested but **not deployed yet**: until `NIXO_KEYS_CONTRACT` is set, trader cards and the leaderboard work and subscribe / mirror return 503.
 2. **Follower:** on `/dashboard/keys`, paste the trader's NEAR ID → public card (PnL, ROE, win rate, drawdown, trade count, PnL curve; no symbols or sides).
 3. **Subscribe:** the browser makes an X25519 keypair (WebCrypto; the private key never leaves the device) and calls `subscribe(trader, periods, x25519_pub)` with NEAR attached. The deposit goes straight to the trader.
 4. **Live feed:** every agent open/close is AES-GCM encrypted with the trader's current epoch key and hash-chained. `/copy/keys` wraps the epoch keys inside the paid window to the **public key stored on-chain**, so naming someone else's account gets you nothing. The browser decrypts and verifies the chain (“chain verified”).
@@ -333,8 +361,8 @@ nixo/
 ### One-command local stack
 
 ```bash
-git clone https://github.com/<your-org>/nixo
-cd nixo
+git clone https://github.com/karar189/NIXO
+cd NIXO
 cp .env.example .env    # one file for every service — never commit real keys
 pnpm setup              # pnpm install + backend npm ci + agents venv
 pnpm dev                # web :3000, agents :8000, backend :4000
@@ -386,21 +414,22 @@ All services share the **repo-root** `.env` (exported by `scripts/dev.sh`). See 
 |---|---|
 | Certificate / `is_clean` | `nixo.testnet` |
 | Authorization vault | `nixo-vault.testnet` |
-| Copy-trading keys | `nixo-keys.testnet` (deploy with `scripts/deploy-copykeys-testnet.sh`, then set `NIXO_KEYS_CONTRACT`) |
-| OutLayer | `outlayer.testnet` |
+| Copy-trading keys | `nixo-keys.testnet` — **not deployed yet** (deploy with `scripts/deploy-copykeys-testnet.sh`, then set `NIXO_KEYS_CONTRACT`) |
+| OutLayer | [`outlayer.testnet`](https://testnet.nearblocks.io/address/outlayer.testnet) |
+| Demo accounts | [`nixo-alice.testnet`](https://testnet.nearblocks.io/address/nixo-alice.testnet) (Clean) · [`nixo-mallory.testnet`](https://testnet.nearblocks.io/address/nixo-mallory.testnet) (Rejected) |
 
 ### Mainnet (live)
 
 | Role | Account | Notes |
 |---|---|---|
-| Certificate / `is_clean` | [`nixo.nixowallet.near`](https://nearblocks.io/address/nixo.nixowallet.near) | Owner `nixowallet.near`; OutLayer `outlayer.near` |
-| Authorization vault | [`vault.nixowallet.near`](https://nearblocks.io/address/vault.nixowallet.near) | `nixo_contract` → `nixo.nixowallet.near` |
+| Certificate / `is_clean` | [`nixo.nixowallet.near`](https://nearblocks.io/address/nixo.nixowallet.near) | Owner [`nixowallet.near`](https://nearblocks.io/address/nixowallet.near); OutLayer [`outlayer.near`](https://nearblocks.io/address/outlayer.near); same code hash as `nixo.testnet` |
+| Authorization vault | [`vault.nixowallet.near`](https://nearblocks.io/address/vault.nixowallet.near) | `nixo_contract` → `nixo.nixowallet.near`; same code hash as `nixo-vault.testnet` |
 
-Point the app at mainnet (or use the in-app network toggle):
+Point the app at mainnet (or use the in-app network toggle on `/dashboard/settings`). Keep `NEXT_PUBLIC_NIXO_CONTRACT` on `nixo.testnet`: it is the testnet fallback the judge demo signs against.
 
 ```bash
-NEXT_PUBLIC_NIXO_CONTRACT=nixo.nixowallet.near
-NEXT_PUBLIC_NIXO_VAULT_CONTRACT=vault.nixowallet.near
+NEXT_PUBLIC_NIXO_CONTRACT_MAINNET=nixo.nixowallet.near
+NEXT_PUBLIC_NIXO_VAULT_CONTRACT_MAINNET=vault.nixowallet.near
 NIXO_CONTRACT=nixo.nixowallet.near
 NIXO_VAULT_CONTRACT=vault.nixowallet.near
 ```
@@ -424,9 +453,10 @@ Deploy helpers: `scripts/deploy-testnet.sh`, `scripts/deploy-vault-testnet.sh`, 
 | `/verify` “Check any wallet” | Preview only (`caller_supplied`); not certifiable |
 | NEAR AI explainer / Private AI | Real path; needs `NEARAI_API_KEY`; no server retention |
 | Agents off-chain path | Off-chain / stub provenance / simulated (labelled) |
-| On-chain vault gated by `is_clean` | Live on testnet + mainnet (confirm deploy before demos) |
+| On-chain vault gated by `is_clean` | Live on testnet + mainnet (`nixo-vault.testnet`, `vault.nixowallet.near`) |
 | Viewing keys / encrypted trade log | Delayed key path shipped; auditor stubbed |
-| Copy-trading keys (07) | Paid subscriptions on `copykeys/` (testnet), browser-side decryption, hash-chained feed: real. Mirrored trades: paper. Demo traders: simulated history, labelled |
+| Copy-trading keys (07) | Browser-side decryption, hash-chained feed, public PnL cards: real. `copykeys/` contract: built + unit-tested, **not deployed yet** (paid subscriptions unavailable until it is). Mirrored trades: paper. Demo traders: simulated history, labelled |
+| Hosted stack | Web on Vercel; agents + backend on AWS EC2 (Docker + Caddy, HTTPS). Live agent is off on the hosted demo |
 | Mock solver + fail-closed SDK | Shipped (paper fill; not a live Intents network) |
 | AI agent execution | Paper by default (1Click dry-run prices). **Live** mode: real mainnet spot swaps via 1Click from a capped agent account, owner-signed start (off unless `NIXO_LIVE_ENABLED=1`) |
 | Markets / news / trade desk | Shipped desk features (quotes/news via APIs; dry-run default for swaps) |
@@ -525,7 +555,10 @@ MIT. See [LICENSE](LICENSE).
 ## Links
 
 - Demo video / X post: link here after posting
-- Hosted demo: link here when deployed
+- Agents API (hosted): https://agents.13-235-153-13.sslip.io/health
+- Waitlist backend (hosted): https://api.13-235-153-13.sslip.io
+- Mainnet contracts: [nixo.nixowallet.near](https://nearblocks.io/address/nixo.nixowallet.near) · [vault.nixowallet.near](https://nearblocks.io/address/vault.nixowallet.near)
+- Source: https://github.com/karar189/NIXO
 - [OutLayer](https://app.outlayer.ai/docs)
 - [NEAR AI Cloud](https://docs.near.ai/cloud/quickstart)
 - [NEAR Intents](https://docs.near-intents.org/)

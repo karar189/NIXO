@@ -25,6 +25,8 @@ export function StatusChapter() {
           columns={["Piece", "Detail", "Status"]}
           rows={[
             ["Checker core + multi-hop search", "Rust source, Kani-proven on bounded harnesses", <StatusPill key="1" status="live" />],
+            ["Mainnet certificate contract", "nixo.nixowallet.near, OutLayer outlayer.near, checker 0.3.0 pinned, 48 h timelock", <StatusPill key="2m" status="live">live · mainnet</StatusPill>],
+            ["Mainnet vault", "vault.nixowallet.near, gated on nixo.nixowallet.near, same code as testnet", <StatusPill key="2v" status="live">live · mainnet</StatusPill>],
             ["OutLayer + nixo.testnet certificates", "Real TEE runs and certificates on testnet", <StatusPill key="2" status="live" />],
             ["Live NearBlocks history in the enclave", "Checker 0.3.0, pinned on chain", <StatusPill key="3" status="live">pinned</StatusPill>],
             ["Re-issuing certificates under 0.3.0", "OutLayer currently fails the run; nothing is stored", <StatusPill key="4" status="blocked" />],
@@ -34,11 +36,16 @@ export function StatusChapter() {
             ["Check any wallet", "Preview only, caller_supplied, different build hash", <StatusPill key="8" status="mock">preview</StatusPill>],
             ["On-chain vault gated by is_clean", "nixo-vault.testnet deployed", <StatusPill key="9" status="live" />],
             ["Delayed viewing key + encrypted trade log", "Agents service, off-chain", <StatusPill key="10" status="live" />],
-            ["Live / time-limited / auditor keys", "Typed, refuse to redeem", <StatusPill key="11" status="later" />],
+            ["Copy-trading keys: encrypted feed, browser decryption, public PnL", "Agents service + /dashboard/keys; demo traders labelled", <StatusPill key="11" status="live" />],
+            ["copykeys contract (paid subscriptions)", "Built and unit-tested, not yet deployed; subscribe / mirror return 503 until NIXO_KEYS_CONTRACT is set", <StatusPill key="11b" status="later">not deployed</StatusPill>],
+            ["Copy-trading auto-mirror", "Paper fills from 1Click dry quotes, no funds move", <StatusPill key="11c" status="mock">paper</StatusPill>],
+            ["Auditor keys", "Typed, refuse to redeem", <StatusPill key="11d" status="later" />],
             ["Two-agent experiment", "Off-chain enforcement, simulated execution, stub provenance", <StatusPill key="12" status="mock">simulated</StatusPill>],
             ["Solver gate + mock solver", "Fail-closed SDK, paper fill only", <StatusPill key="13" status="mock" />],
             ["Private AI", "NEAR AI Cloud, fresh-nonce checks, no retention", <StatusPill key="14" status="live" />],
             ["Confidential Intents swaps", "Mainnet, wallet-signed", <StatusPill key="15" status="live" />],
+            ["Live AI agent on Intents", "Real mainnet spot swaps from a capped agent account, NEP-413 owner start; off unless NIXO_LIVE_ENABLED=1 (off on the hosted demo)", <StatusPill key="15b" status="live">opt-in</StatusPill>],
+            ["Hosted stack", "Web on Vercel; agents + backend on AWS EC2 (Docker, Caddy, HTTPS)", <StatusPill key="15c" status="live" />],
             ["Chain Signatures / cross-chain relayer", "Not built", <StatusPill key="16" status="later" />],
           ]}
         />
@@ -94,9 +101,9 @@ export function StatusChapter() {
         <SpecTable
           columns={["Stage", "Scope"]}
           rows={[
-            ["This version", "Live enclave history, vault gate on is_clean, agent within contract limits, one delayed viewing key, mock solver, honest README"],
-            ["v1", "Mainnet, multisig governance, published SDKs, audit, withdrawal pilot, real solver integration"],
-            ["v2", "Chain Signatures registries, richer disclosure keys (live, time-limited, auditor), destination and amount-level provenance, broader venue coverage"],
+            ["This version", "Certificate + vault live on mainnet and testnet, live enclave history, agent within contract limits, delayed viewing key, paid copy-trading keys with paper auto-mirror, capped live agent on Intents, mock solver, honest README"],
+            ["v1", "Multisig governance, deployed copykeys contract, real-money mirroring through vault execute, published SDKs, audit, withdrawal pilot, real solver integration"],
+            ["v2", "Chain Signatures registries, auditor keys, TEE-signed trader stats, destination and amount-level provenance, broader venue coverage"],
           ]}
         />
         <NextLinks

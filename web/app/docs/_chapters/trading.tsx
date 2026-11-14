@@ -38,6 +38,9 @@ export function TradingChapter() {
             ["Confidential swap", "NEAR ⇄ USDC spot, signed in your wallet, settled through 1Click", <StatusPill key="1" status="live">live · mainnet</StatusPill>],
             ["Paper desk", "Leveraged paper positions with TP / SL, priced by 1Click dry quotes", <StatusPill key="2" status="mock">paper</StatusPill>],
             ["Paper agent", "LLM-planned strategy runs on every tick of a paper session", <StatusPill key="3" status="mock">paper</StatusPill>],
+            ["Live AI agent", "The same agent's decisions as real spot swaps through NEAR Intents / 1Click, from one capped agent account", <StatusPill key="4" status="live">live · opt-in</StatusPill>],
+            ["Copy-trading keys", "Sell encrypted access to your agent's trades; followers decrypt and mirror", <StatusPill key="5" status="live">see copy trading</StatusPill>],
+            ["Markets and news", "/dashboard/markets (per-symbol pages, swap panel) and /dashboard/news (aggregated desk feed)", <StatusPill key="6" status="live" />],
           ]}
         />
       </DocSection>
@@ -126,6 +129,40 @@ export function TradingChapter() {
         />
       </DocSection>
 
+      <DocSection id="live">
+        <SectionHeading
+          eyebrow="Live AI agent · mainnet"
+          title="Real swaps, from an account with hard limits."
+          copy="Configure AI agent → Execution → Live. The agent's decisions become real spot swaps through 1Click from one dedicated agent account. It is off unless the operator sets NIXO_LIVE_ENABLED=1, and it is off on the hosted demo."
+        />
+        <Steps
+          items={[
+            { title: "Signal → real quote", body: <>A long signal asks 1Click for a real quote: USDC → NEAR, nBTC or bridged ETH. An exit sells exactly the amount it bought. Shorts are skipped and leverage is fixed at 1×, because Intents settles spot swaps. SOL stays paper-only (no NEAR-chain token).</> },
+            { title: "Check the quote", body: <>Recipient and refund address must be the agent account. A quote more than <C>NIXO_LIVE_MAX_DEVIATION_BPS</C> (default 150 bps) worse than the Binance mark is refused.</> },
+            { title: "Sign, submit, poll", body: <>The service signs one transaction from the agent account (storage registration if needed, then <C>ft_transfer</C> of the exact amount), hands the hash to 1Click and polls until <C>SUCCESS</C>, <C>REFUNDED</C> or <C>FAILED</C>. Fills use the amounts actually settled.</> },
+            { title: "Show the receipts", body: <>Every order is appended to <C>agents/.nixo_live/orders.jsonl</C> and shown on the desk with NearBlocks and Intents explorer links.</> },
+          ]}
+        />
+        <SpecTable
+          columns={["Guardrail", "Default"]}
+          rows={[
+            ["Kill switch", "NIXO_LIVE_ENABLED (off)"],
+            ["Per-trade cap", "25 USDC (NIXO_LIVE_MAX_TRADE_USDC), min 1 USDC"],
+            ["Rolling 24 h budget", "100 USDC (NIXO_LIVE_DAILY_BUDGET_USDC)"],
+            ["Market allowlist", "NEAR, BTC, ETH (NIXO_LIVE_MARKETS)"],
+            ["Slippage", "100 bps (NIXO_LIVE_MAX_SLIPPAGE_BPS)"],
+            ["Concurrency", "One live session at a time; Stop waits for an in-flight swap instead of abandoning it"],
+            ["Gas", "0.05 NEAR kept in the agent account for gas and storage"],
+          ]}
+        />
+        <Bullets
+          items={[
+            <Fragment key="b1">Only <C>NIXO_AGENT_OWNER</C> can start it. The wallet signs a NEP-413 message naming the market and size, bound to a single-use nonce from <C>POST /trade/live/challenge</C>; the server checks it is a full-access key of that account on mainnet.</Fragment>,
+            <Fragment key="b2">The server holds the agent account&apos;s key, so keep its balance small. Sessions live in memory: after a restart, any bought asset stays in the agent account and its balance shows on the desk.</Fragment>,
+          ]}
+        />
+      </DocSection>
+
       <DocSection id="models">
         <SectionHeading
           eyebrow="Model providers"
@@ -144,7 +181,7 @@ export function TradingChapter() {
         />
         <NextLinks
           links={[
-            { href: "/docs/private-ai", label: "Private AI" },
+            { href: "/docs/copy-trading", label: "Copy-trading keys" },
             { href: "/docs/developers#agents-api", label: "Agents API" },
           ]}
         />

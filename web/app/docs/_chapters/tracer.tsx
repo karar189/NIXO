@@ -25,7 +25,7 @@ export function TracerChapter() {
         <Lead>
           The passport answers one question for anyone who asks: is this NEAR account currently certified clean? The
           trace that produced the answer runs inside an Intel TDX enclave on OutLayer. Only a short certificate, under
-          ~900 bytes and never the path, reaches <C>nixo.testnet</C>.
+          ~900 bytes and never the path, reaches <C>nixo.nixowallet.near</C> on mainnet or <C>nixo.testnet</C> on testnet.
         </Lead>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/dashboard/privacy#clean-funds" className="btn-primary">
@@ -40,10 +40,11 @@ export function TracerChapter() {
           </Link>
         </div>
         <SpecTable
-          columns={["Component", "Value on testnet", "Status"]}
+          columns={["Component", "Value", "Status"]}
           rows={[
-            ["Certificate contract", "nixo.testnet · owner nixo.testnet · OutLayer outlayer.testnet", <StatusPill key="1" status="live" />],
-            ["Pinned checker", "3ebe1fb8…ed59 (checker 0.3.0, live NearBlocks history), served from test.fastfs.io", <StatusPill key="2" status="live" />],
+            ["Certificate contract · mainnet", "nixo.nixowallet.near · owner nixowallet.near · OutLayer outlayer.near · 48 h timelock", <StatusPill key="0" status="live">live · mainnet</StatusPill>],
+            ["Certificate contract · testnet", "nixo.testnet · owner nixo.testnet · OutLayer outlayer.testnet · same code hash as mainnet", <StatusPill key="1" status="live" />],
+            ["Pinned checker", "3ebe1fb8…ed59 on both networks (checker 0.3.0, live NearBlocks history), served from test.fastfs.io", <StatusPill key="2" status="live" />],
             ["Certificate TTL", "7 days (604 800 s)", <StatusPill key="3" status="live" />],
             ["Checker timelock", "5 minutes on testnet (48 h default in code)", <StatusPill key="4" status="live" />],
             ["Stored demo certificates", "Alice clean / Mallory rejected · checker 0.1.0, fixture history, valid to 20–21 Nov 2026", <StatusPill key="5" status="fixture" />],

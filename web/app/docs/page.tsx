@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { DocsChapter, DocsShell } from "@/components/docs/docs-shell";
+import { CopyTradingChapter } from "./_chapters/copy-trading";
+import { DeploymentsChapter } from "./_chapters/deployments";
 import { DevelopersChapter } from "./_chapters/developers";
 import { IntroChapter } from "./_chapters/intro";
 import { PrivateAiChapter } from "./_chapters/private-ai";
@@ -12,7 +14,7 @@ import { VaultChapter } from "./_chapters/vault";
 export const metadata: Metadata = {
   title: "Docs · NIXO",
   description:
-    "NIXO is a clean-funds passport and a gated trading layer for NEAR: a TEE-checked certificate, a vault that only accepts certified deposits, and a fail-closed gate for solvers.",
+    "NIXO is a clean-funds passport and a gated trading layer for NEAR, live on mainnet: a TEE-checked certificate, a vault that only accepts certified deposits, a fail-closed gate for solvers, a capped live AI agent on NEAR Intents, and paid copy-trading viewing keys.",
 };
 
 /** All docs on one continuous page, in DOCS_NAV order. Old /docs/<chapter> URLs redirect here (next.config.ts). */
@@ -21,6 +23,9 @@ export default function DocsPage() {
     <DocsShell>
       <DocsChapter chapter="" first>
         <IntroChapter />
+      </DocsChapter>
+      <DocsChapter chapter="deployments">
+        <DeploymentsChapter />
       </DocsChapter>
       <DocsChapter chapter="tracer">
         <TracerChapter />
@@ -33,6 +38,9 @@ export default function DocsPage() {
       </DocsChapter>
       <DocsChapter chapter="trading">
         <TradingChapter />
+      </DocsChapter>
+      <DocsChapter chapter="copy-trading">
+        <CopyTradingChapter />
       </DocsChapter>
       <DocsChapter chapter="private-ai">
         <PrivateAiChapter />

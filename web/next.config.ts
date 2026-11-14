@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
       { source: "/trade/settings", destination: "/dashboard/settings", permanent: false },
       { source: "/trade/about", destination: "/", permanent: false },
       // The docs are one continuous page; old per-chapter URLs land on their chapter.
-      ...["tracer", "vault", "solver", "trading", "private-ai", "developers", "status"].map((chapter) => ({
+      ...["deployments", "tracer", "vault", "solver", "trading", "copy-trading", "private-ai", "developers", "status"].map((chapter) => ({
         source: `/docs/${chapter}`,
         destination: `/docs#${chapter}`,
         permanent: false,

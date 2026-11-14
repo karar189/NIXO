@@ -38,6 +38,17 @@ export const DOCS_NAV: readonly DocsNavSection[] = [
           { id: "tour", label: "90-second tour" },
         ],
       },
+      {
+        chapter: "deployments",
+        label: "Live deployment",
+        children: [
+          { id: "mainnet", label: "Mainnet contracts" },
+          { id: "testnet", label: "Testnet contracts" },
+          { id: "parity", label: "Same code everywhere" },
+          { id: "hosted", label: "Hosted services" },
+          { id: "network", label: "Switching networks" },
+        ],
+      },
     ],
   },
   {
@@ -114,7 +125,18 @@ export const DOCS_NAV: readonly DocsNavSection[] = [
           { id: "flow", label: "Swap lifecycle" },
           { id: "paper", label: "Paper desk" },
           { id: "agents", label: "AI trading agents" },
+          { id: "live", label: "Live AI agent" },
           { id: "models", label: "Model providers" },
+        ],
+      },
+      {
+        chapter: "copy-trading",
+        label: "Copy-trading keys",
+        children: [
+          { id: "overview", label: "What it is" },
+          { id: "flow", label: "How it works" },
+          { id: "contract", label: "copykeys contract" },
+          { id: "limits", label: "What it does not do" },
         ],
       },
       {
@@ -138,7 +160,7 @@ export const DOCS_NAV: readonly DocsNavSection[] = [
         label: "Developer reference",
         children: [
           { id: "contracts", label: "Deployed contracts" },
-          { id: "nixo-methods", label: "nixo.testnet methods" },
+          { id: "nixo-methods", label: "Certificate methods" },
           { id: "vault-methods", label: "Vault methods" },
           { id: "events", label: "Events" },
           { id: "web-api", label: "Web API routes" },

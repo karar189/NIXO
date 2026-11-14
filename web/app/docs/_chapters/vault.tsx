@@ -36,10 +36,12 @@ export function VaultChapter() {
         <SpecTable
           columns={["Piece", "What it is", "Status"]}
           rows={[
-            ["nixo-vault.testnet", "Rust vault contract (vault/), native NEAR, points at nixo.testnet", <StatusPill key="1" status="live">deployed</StatusPill>],
+            ["vault.nixowallet.near", "Rust vault contract (vault/) on mainnet, native NEAR, points at nixo.nixowallet.near", <StatusPill key="0" status="live">live · mainnet</StatusPill>],
+            ["nixo-vault.testnet", "Same code on testnet, points at nixo.testnet", <StatusPill key="1" status="live">deployed</StatusPill>],
             ["Agent function-call key", "Key that can call execute and nothing else", <StatusPill key="2" status="live" />],
             ["Encrypted trade log + delayed viewing key", "agents service (agents/app/nixo/viewing_keys.py)", <StatusPill key="3" status="live">off-chain</StatusPill>],
-            ["Live / time-limited / auditor keys", "Typed in the API, refuse to redeem", <StatusPill key="4" status="later" />],
+            ["Live, time-limited keys", "Shipped as paid copy-trading keys (see Copy-trading keys)", <StatusPill key="4" status="live">copy trading</StatusPill>],
+            ["Auditor keys", "Typed in the API, refuse to redeem", <StatusPill key="4b" status="later" />],
             ["Two-agent experiment", "In-process policy vault, simulated execution, stub provenance", <StatusPill key="5" status="mock">simulated</StatusPill>],
           ]}
         />
@@ -223,8 +225,7 @@ scripts/vault-fc-key.sh
           columns={["Key type", "Behaviour", "Status"]}
           rows={[
             ["delayed", "Redeemable after delay, decrypts this run's log", <StatusPill key="d" status="live" />],
-            ["live", "Real-time access", <StatusPill key="l" status="later">stub</StatusPill>],
-            ["time_limited", "Access that expires", <StatusPill key="t" status="later">stub</StatusPill>],
+            ["live / time_limited", "Real-time access that expires. Typed stubs here; shipped as copy-trading keys (paid on-chain, epoch keys wrapped to the follower's X25519 key)", <StatusPill key="l" status="live">via copy trading</StatusPill>],
             ["auditor", "Read-only access for a named auditor", <StatusPill key="a" status="later">stub</StatusPill>],
           ]}
         />
@@ -247,7 +248,7 @@ scripts/vault-fc-key.sh
         <NextLinks
           links={[
             { href: "/docs/solver", label: "Solver gate" },
-            { href: "/docs/developers#vault-methods", label: "Vault reference" },
+            { href: "/docs/copy-trading", label: "Copy-trading keys" },
           ]}
         />
       </DocSection>
