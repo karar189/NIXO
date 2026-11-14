@@ -10,7 +10,9 @@ import {
   Eye,
   KeyRound,
   LayoutDashboard,
+  LineChart,
   LogOut,
+  Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
@@ -25,6 +27,8 @@ type NavItem = { href: string; label: string; icon: LucideIcon; hint?: string; s
 const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/trade", label: "Swap", icon: CandlestickChart, hint: "Confidential Intents" },
+  { href: "/dashboard/markets", label: "Markets", icon: LineChart, hint: "Top assets · swap rail" },
+  { href: "/dashboard/news", label: "News", icon: Newspaper, hint: "NEAR Protocol · Intents" },
   { href: "/dashboard/privacy", label: "Privacy", icon: ShieldCheck, hint: "Certificate · AI · solver" },
   { href: "/dashboard/agents", label: "Agents & vaults", icon: Bot, hint: "On-chain vault + experiment" },
   { href: "/dashboard/keys", label: "Viewing keys", icon: KeyRound, hint: "Sell access to trades", soon: true },
@@ -42,7 +46,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const [collapsed, setCollapsed] = useState(false);
 
   const renderItem = (item: NavItem) => {
-    const active = pathname === item.href;
+    const active =
+      item.href === "/dashboard"
+        ? pathname === "/dashboard"
+        : pathname === item.href || pathname.startsWith(`${item.href}/`);
     const Icon = item.icon;
     const body = (
       <>
