@@ -130,7 +130,7 @@ The agent’s key is a function-call key that can only call `execute`. `execute`
 
 **On-chain events** follow NEP-297, including at least: deposit accepted, deposit refunded, assigned, execution allowed, execution blocked, revoked, withdrawn.
 
-**Out of scope for this layer, in this version:** a confidential execution layer that would hide vault activity on-chain; copy-key marketplace features beyond a stub; treating `is_clean` as proof about a specific subset of coins rather than the depositor at the time of that deposit.
+**Out of scope for this layer, in this version:** a confidential execution layer that would hide vault activity on-chain; copy-key marketplace features beyond paid copy-trading keys for agent sessions (shipped: `copykeys/` subscriptions, browser-decrypted hash-chained feed, paper auto-mirror; not shipped: real-money mirroring, TEE-signed stats); treating `is_clean` as proof about a specific subset of coins rather than the depositor at the time of that deposit.
 
 **Acceptance criteria**
 

@@ -14,3 +14,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+
+# Runtime stores (encrypted trade logs / copy-trade feed)
+.nixo_viewing/
+.nixo_copy/

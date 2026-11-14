@@ -9,6 +9,7 @@ import { PaperOrderForm } from "@/components/trade/PaperOrderForm";
 import { LiveSwap } from "@/components/trade/LiveSwap";
 import { PairIcons } from "@/components/trade/PairIcons";
 import { AgentSetupModal, DEFAULT_CONFIG } from "@/components/trade/AgentSetupModal";
+import { DeployCopyAgent } from "@/components/keys/DeployCopyAgent";
 import { PROVIDER_SHORT, tradingApi, type Market, type SessionConfig, type Ticker } from "@/lib/trading/api";
 import { useTradingSession } from "@/lib/trading/useTradingSession";
 import { fmtPct, fmtPrice, fmtUsd, humanize, pnlTone } from "@/lib/trading/format";
@@ -94,6 +95,7 @@ export default function TradePage() {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          <DeployCopyAgent />
           {running && session?.mode === "agent" && (
             <button
               type="button"

@@ -44,6 +44,14 @@ jobs:
       - run: rustup show
       - run: cargo test --locked
 
+  copykeys:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: copykeys } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: cargo test --locked
+
   web:
     runs-on: ubuntu-latest
     steps:

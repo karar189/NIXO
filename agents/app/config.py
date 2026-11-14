@@ -67,5 +67,16 @@ class Settings(BaseSettings):
     # Delayed viewing-key default delay (seconds) before redeemable.
     viewing_key_delay_seconds: float = Field(60.0, validation_alias="NIXO_VIEWING_KEY_DELAY")
 
+    # Copy trading (paid viewing keys). Contract: copykeys/ deployed e.g. to nixo-keys.testnet.
+    # Unset: listings/subscriptions are unavailable and only demo traders show.
+    nixo_keys_contract: str | None = Field(None, validation_alias="NIXO_KEYS_CONTRACT")
+    # Feed data keys rotate every epoch; a subscriber gets keys only for epochs in their window.
+    copy_epoch_secs: float = Field(3600.0, ge=10, validation_alias="NIXO_COPY_EPOCH_SECS")
+    # Seals feed data keys on disk so a restart keeps the feed readable. Unset: memory only.
+    copy_master_key: str | None = Field(None, validation_alias="NIXO_COPY_MASTER_KEY")
+    copy_store_dir: str | None = Field(None, validation_alias="NIXO_COPY_STORE")
+    # Seed labelled demo traders (simulated history) so the leaderboard is never empty.
+    copy_demo: bool = Field(True, validation_alias="NIXO_COPY_DEMO")
+
 
 settings = Settings()

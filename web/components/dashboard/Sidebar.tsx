@@ -15,7 +15,7 @@ const MAIN_NAV: NavItem[] = [
   { href: "/dashboard/news", label: "News", index: "04" },
   { href: "/dashboard/privacy", label: "Privacy", index: "05" },
   { href: "/dashboard/agents", label: "Agents & vaults", index: "06" },
-  { href: "/dashboard/keys", label: "Viewing keys", index: "07", soon: true },
+  { href: "/dashboard/keys", label: "Viewing keys", index: "07" },
 ];
 
 const ACCOUNT_NAV: NavItem[] = [

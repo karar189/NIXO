@@ -27,6 +27,33 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat,
 STORE_DIR = Path(os.environ.get("NIXO_VIEWING_STORE", Path(__file__).resolve().parents[2] / ".nixo_viewing"))
 
 
+def wrap_key(data_key: bytes, recipient_x25519_pub_b64: str) -> dict:
+    """Seal `data_key` to a recipient's X25519 public key.
+
+    ECDH with a fresh ephemeral key, wrap key = SHA-256(shared secret), AES-GCM.
+    `wrapped_b64` is base64(nonce[12] || ciphertext). The browser unwraps the same
+    way with WebCrypto (web/lib/copykeys/crypto.ts).
+    """
+    recipient = X25519PublicKey.from_public_bytes(base64.b64decode(recipient_x25519_pub_b64))
+    ephemeral = X25519PrivateKey.generate()
+    kek = hashlib.sha256(ephemeral.exchange(recipient)).digest()
+    nonce = os.urandom(12)
+    wrapped = AESGCM(kek).encrypt(nonce, data_key, None)
+    eph_pub = ephemeral.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+    return {
+        "ephemeral_pub_b64": base64.b64encode(eph_pub).decode(),
+        "wrapped_b64": base64.b64encode(nonce + wrapped).decode(),
+    }
+
+
+def unwrap_key(*, buyer_private_b64: str, ephemeral_pub_b64: str, wrapped_b64: str) -> bytes:
+    buyer_priv = X25519PrivateKey.from_private_bytes(base64.b64decode(buyer_private_b64))
+    eph_pub = X25519PublicKey.from_public_bytes(base64.b64decode(ephemeral_pub_b64))
+    kek = hashlib.sha256(buyer_priv.exchange(eph_pub)).digest()
+    blob = base64.b64decode(wrapped_b64)
+    return AESGCM(kek).decrypt(blob[:12], blob[12:], None)
+
+
 class KeyType(StrEnum):
     DELAYED = "delayed"
     LIVE = "live"  # stub — not shipped
@@ -190,26 +217,20 @@ class ViewingKeyStore:
             if offer.redeemed_by and offer.redeemed_by != buyer:
                 raise PermissionError("ALREADY_REDEEMED")
 
-            buyer_pub = X25519PublicKey.from_public_bytes(base64.b64decode(buyer_x25519_pub_b64))
-            ephemeral = X25519PrivateKey.generate()
-            shared = ephemeral.exchange(buyer_pub)
-            wrap_key = hashlib.sha256(shared).digest()
-            nonce = os.urandom(12)
-            wrapped = AESGCM(wrap_key).encrypt(nonce, rv.data_key, None)
-            eph_pub = ephemeral.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+            wrapped = wrap_key(rv.data_key, buyer_x25519_pub_b64)
 
             receipt_id = f"rcpt_{uuid.uuid4().hex[:10]}"
             offer.redeemed_by = buyer
             offer.redeemed_at = now
             offer.receipt_id = receipt_id
-            offer.wrapped_data_key_b64 = base64.b64encode(nonce + wrapped).decode()
+            offer.wrapped_data_key_b64 = wrapped["wrapped_b64"]
 
             return {
                 "receipt_id": receipt_id,
                 "key_id": key_id,
                 "run_id": rv.run_id,
                 "buyer": buyer,
-                "ephemeral_pub_b64": base64.b64encode(eph_pub).decode(),
+                "ephemeral_pub_b64": wrapped["ephemeral_pub_b64"],
                 "wrapped_data_key_b64": offer.wrapped_data_key_b64,
                 "entry_count": len(rv.entries),
                 "entries": [e.to_dict() for e in rv.entries],
@@ -224,13 +245,8 @@ class ViewingKeyStore:
 
     def unwrap_data_key(self, *, buyer_private_b64: str, ephemeral_pub_b64: str,
                        wrapped_data_key_b64: str) -> bytes:
-        buyer_priv = X25519PrivateKey.from_private_bytes(base64.b64decode(buyer_private_b64))
-        eph_pub = X25519PublicKey.from_public_bytes(base64.b64decode(ephemeral_pub_b64))
-        shared = buyer_priv.exchange(eph_pub)
-        wrap_key = hashlib.sha256(shared).digest()
-        blob = base64.b64decode(wrapped_data_key_b64)
-        nonce, wrapped = blob[:12], blob[12:]
-        return AESGCM(wrap_key).decrypt(nonce, wrapped, None)
+        return unwrap_key(buyer_private_b64=buyer_private_b64, ephemeral_pub_b64=ephemeral_pub_b64,
+                          wrapped_b64=wrapped_data_key_b64)
 
     def list_offers(self, run_id: str) -> list[dict]:
         rv = self._runs.get(run_id)

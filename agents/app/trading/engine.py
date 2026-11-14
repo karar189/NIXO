@@ -13,7 +13,7 @@ import uuid
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Callable, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -111,6 +111,8 @@ class Session:
     task: asyncio.Task | None = None
     data_errors: int = 0
     ended_reason: str | None = None
+    # Set on a follower's position opened by the copy-trade mirror: (trader, trader's session id).
+    copy_of: tuple[str, str] | None = None
 
 
 def _now_iso() -> str:
@@ -127,6 +129,9 @@ class Engine:
     def __init__(self) -> None:
         self.sessions: dict[str, Session] = {}
         self.books: dict[str, AccountBook] = {}
+        # Called synchronously with every OPEN/CLOSE fill event (copy-trade feed + mirror).
+        # Listeners must not block; app.copytrade queues the event and returns.
+        self.listeners: list[Callable[[dict], None]] = []
 
     def book(self, account: str) -> AccountBook:
         return self.books.setdefault(account, AccountBook())
@@ -193,12 +198,13 @@ class Engine:
         session.task = asyncio.create_task(self._run(session))
         return session
 
-    async def open_manual(self, account: str, order: ManualOrder) -> Session:
+    async def open_manual(self, account: str, order: ManualOrder,
+                          copy_of: tuple[str, str] | None = None) -> Session:
         self._assert_idle(account)
         market = _market(order.symbol)
         cfg = SessionConfig(symbol=market.symbol, amount_usdc=order.amount_usdc, leverage=order.leverage,
                             poll_seconds=order.poll_seconds)
-        session = Session(account=account, mode="manual", market=market, config=cfg)
+        session = Session(account=account, mode="manual", market=market, config=cfg, copy_of=copy_of)
         try:
             mark = await market_data.get_price(market.binance_symbol)
         except MarketDataError as err:
@@ -439,6 +445,12 @@ class Engine:
                   f"TP {_fmt(tp)} · SL {_fmt(sl)} · Liq {_fmt(session.position.liq_price)}")
         if fill.note:
             self._log(session, "warn", fill.note)
+        p = session.position
+        self._emit(session, "OPEN", {
+            "symbol": session.market.symbol, "side": side, "entry_price": entry, "margin": margin,
+            "leverage": cfg.leverage, "notional": notional, "qty": p.qty, "tp": tp, "sl": sl,
+            "strategy": strategy, "opened_at": p.opened_at,
+        })
 
     async def _close(self, session: Session, mark: float, reason: str, *, signal: float | None = None) -> None:
         pos = session.position
@@ -474,6 +486,8 @@ class Engine:
             "closed_at": time.time(),
             "entry_fill": pos.entry_fill,
             "exit_fill": fill.to_dict(),
+            "mode": session.mode,
+            "copy_of": list(session.copy_of) if session.copy_of else None,
         }
         session.trades.append(trade)
         self.book(session.account).trades.append(trade)
@@ -484,11 +498,28 @@ class Engine:
         self._log(session, "sl_tp" if reason in ("TAKE_PROFIT", "STOP_LOSS", "LIQUIDATED") else "action",
                   f"Closed {pos.side} @ {fill.price:.6g} ({reason.replace('_', ' ').lower()}): PnL ${pnl:+,.2f} "
                   f"({trade['roe_pct']:+.2f}% on margin)")
+        self._emit(session, "CLOSE", {"trade": trade})
 
     # ------------------------------------------------------------ records
 
     def _log(self, session: Session, level: str, message: str) -> None:
         session.logs.append({"ts": _now_iso(), "level": level, "message": message})
+
+    def _emit(self, session: Session, kind: str, data: dict) -> None:
+        event = {
+            "type": kind,
+            "account": session.account,
+            "mode": session.mode,
+            "session_id": session.id,
+            "copy_of": list(session.copy_of) if session.copy_of else None,
+            "ts": time.time(),
+            **data,
+        }
+        for listener in self.listeners:
+            try:
+                listener(event)
+            except Exception:  # a copy-trade failure must never break the trader's own session
+                log.exception("engine listener failed")
 
     def _record(self, session: Session, action: str, status: str, **extra) -> None:
         session.decisions.append({"id": uuid.uuid4().hex, "ts": _now_iso(), "action": action, "status": status, **extra})
@@ -511,6 +542,7 @@ class Engine:
                 "started_at": session.started_at,
                 "paused": session.paused,
                 "ended_reason": session.ended_reason,
+                "copy_of": list(session.copy_of) if session.copy_of else None,
                 "last_price": session.last_price,
                 "last_action": session.last_action,
                 "last_reason": session.last_reason,
