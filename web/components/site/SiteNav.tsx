@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/#privacy", label: "Privacy" },
   { href: "/dashboard/privacy", label: "Privacy" },
   { href: "/verify", label: "Verify" },
+  { href: "/docs", label: "Docs" },
 ];
 
 export function SiteNav() {
@@ -53,6 +54,7 @@ export function SiteFooter() {
               <Link href="/#product" className="text-sm text-muted hover:text-accent">Product</Link>
               <Link href="/#how" className="text-sm text-muted hover:text-accent">How it works</Link>
               <Link href="/#privacy" className="text-sm text-muted hover:text-accent">Privacy</Link>
+              <Link href="/docs" className="text-sm text-muted hover:text-accent">Docs</Link>
             </div>
             <div className="flex flex-col gap-3">
               <p className="kicker">App</p>

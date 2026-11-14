@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  BookOpen,
   Bot,
   CandlestickChart,
   Eye,
@@ -31,6 +32,7 @@ const MAIN_NAV: NavItem[] = [
 
 const ACCOUNT_NAV: NavItem[] = [
   { href: "/verify", label: "Exchange view", icon: Eye, hint: "is_clean lookup" },
+  { href: "/docs", label: "Docs", icon: BookOpen, hint: "How every feature works" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
   { href: "/", label: "Back to site", icon: LogOut },
 ];
