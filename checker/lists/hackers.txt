@@ -1,0 +1,11 @@
+# NIXO curated hacker/exploit address list.
+# One address per line. Lines starting with # are comments.
+# Every real entry MUST cite a public source in a comment above it.
+#
+# Binance hack, 29 Oct 2026: main stolen-funds wallet on NEAR mainnet.
+# Attributed publicly by on-chain analysts AMLBot and Shridlock (posts on X),
+# consistent with Elliptic's analysis. This is NOT an official attribution
+# (no OFAC/FBI/Binance statement names this wallet).
+# First laundering hop verified on chain: tx Ec39nAANXRucmAxgHe3fMUTyKviEQMgHRHYKJ4Cnn7Do
+# (21,351.91 NEAR to d368b0079b34b0700b650eed72417b66467020fde05b8bf8a1fc8a375dc84484).
+efd224256518a7cacd209867963276efed302a8e222c013c43f4b1bd369ae5af

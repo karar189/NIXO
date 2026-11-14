@@ -1,0 +1,87 @@
+[
+  {
+    "source_id": "us-ofac",
+    "jurisdiction": "US",
+    "source_url": "https://sanctionslistservice.ofac.treas.gov/api/download/SDN.XML",
+    "resolved_url": "https://wc2h-sls-prod-public-published.s3.us-gov-west-1.amazonaws.com/Published/d1a49dd0-69e4-491f-b779-7601744c2459/2026-10-27/5fbdd3eb-577a-4a44-ad04-9c51885340c9/SDN.XML?X-Amz-Expires=3600&X-Amz-Security-Token=FwoDYXdzEFIaDOjln1Ey6Sg6m62zcyLuBGrLzZIcLzkvPqGSEuk94AC9h%2BSbAfOCXXrjPUFpeO1rGRgMjVwA%2B3RRO7ZVx9ZJ3hu8NmdttcuVtvP4RUgZtpORZgBobFbLGtsdc6WyXBIBh2tS30Uw5BItkvNeYd%2B1H1eZLwD9axO5P7%2F3F93bTG4Cd9MB5Nl2hlNmgLKSka8SyGUVYPP%2BIoNMDqSAivJvv0Hhk3Kyk9SS1joMV5JwKIPtqFxvCaV%2BjXbMYRgzVOwxVACXE%2BnGO%2FHV8y8TOOzoMehzZKI6DZrXvJyYRg4XUz8P8BBeFinfAa9qN85E58OLVoWXNfKDstpDpP3Hr9%2FDrU7B0zABMaIHdPEs3LQ6AiPiHAzPHN5st0%2BdzhzFR1qaJfC4XYiwzHxteWWJBGGK0%2Bm73eEUeJvOvsXUKgcrXxwNIOVKCl9oys4PQ579VSBH6251opL19mZ5eohpVYA1c1SnYvTibC2xt9Y%2F%2BjMAskKQuMEQVuLbPEOxYd92E0UXJE8BdBsmWeAdTzYk421r%2Bage4FqteSIxcCLfdIZROqj9Qhr6EG50bPOAkuzXq8j%2FeFaa3qqmmyG37JM1FWN0fRtEDxzJc0qn9IwyLFCfkIRRxM3mCSYSdNdLnCwnWbryCefFz5qaGBbh53m8lPvg%2BJoYjmolawcqIOF84IfhtynmRwkS5uii3aEU3AmUM%2BXzj%2B%2BFUnz%2FXLzbM9z9aQDtO2AKQBaAToRUr6grDGd3hJfab2LNVHL%2BjXL69Ceatj9pIYooSJ1GA8FnlJTvxhSU0Mu5zdLjTpGmYZz%2BrMNuncxtkD%2F26ME8lMDK%2BSBeS3vKRo5muZNfvE2vhmZgbgMok%2F6K1wYyQV4LVMeUcS9g00uf2zhmKhtAZmgRM7Xz9Y3BVIjy1fEkbyrPXHjgW9TJWk%2BTpm01jJXECYseKa6hFPh6oaaPwYL5&response-content-disposition=attachment%3B%20filename%3D%22sdn.xml%22&response-content-type=text%2Fxml&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIASARBLFPLGDKFN22D%2F20261029%2Fus-gov-west-1%2Fs3%2Faws4_request&X-Amz-Date=20261029T042720Z&X-Amz-SignedHeaders=host&X-Amz-Signature=2159839a847377a671c416f112899f2332c09c5d2593fbe590320955c070c65c",
+    "retrieved_at": "2026-10-29T04:27:20.084241+00:00",
+    "content_hash": "0213f3a07b569dabf643e7ea8fd23d81327f83a2ace023a41ef311796accf1a8",
+    "status": "success",
+    "record_count": 19484,
+    "address_count": 127,
+    "generated_files": [
+      "csv/us-ofac.csv",
+      "json/us-ofac.json",
+      "txt/us-ofac.txt"
+    ],
+    "error": null
+  },
+  {
+    "source_id": "eu",
+    "jurisdiction": "EU",
+    "source_url": "https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw",
+    "resolved_url": "https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw",
+    "retrieved_at": "2026-10-29T04:27:23.839704+00:00",
+    "content_hash": "636800c3e494b2ef8934f51f5e23c914a6208a383ac850e674b1b35a7d49d34f",
+    "status": "success",
+    "record_count": 6269,
+    "address_count": 2,
+    "generated_files": [
+      "csv/eu.csv",
+      "json/eu.json",
+      "txt/eu.txt"
+    ],
+    "error": null
+  },
+  {
+    "source_id": "uk",
+    "jurisdiction": "UK",
+    "source_url": "https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml",
+    "resolved_url": "https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml",
+    "retrieved_at": "2026-10-29T04:27:43.336741+00:00",
+    "content_hash": "6ddb9315a4d34cc89824a321db3688beaf4d71e4ceda7899874539d8e332792b",
+    "status": "success",
+    "record_count": 6420,
+    "address_count": 6,
+    "generated_files": [
+      "csv/uk.csv",
+      "json/uk.json",
+      "txt/uk.txt"
+    ],
+    "error": null
+  },
+  {
+    "source_id": "un",
+    "jurisdiction": "UN",
+    "source_url": "https://scsanctions.un.org/resources/xml/en/consolidated.xml",
+    "resolved_url": "https://unsolprodfiles.blob.core.windows.net/publiclegacyxmlfiles/EN/consolidatedLegacyByPRN.xml?sv=2024-05-04&st=2026-10-29T04%3A27%3A46Z&se=2026-10-29T05%3A27%3A46Z&sr=b&sp=r&sig=xMx%2BytSBdC5XeSkahTp7j%2FVmv54fiSVA%2FBNUSNAyHPw%3D&rscd=attachment%3B%20filename%3D%22consolidatedLegacyByPRN.xml%22",
+    "retrieved_at": "2026-10-29T04:27:45.980227+00:00",
+    "content_hash": "f9eeb5d7b1b98790f47ac1087a6ed3d760f349431f8517f740ce944caaef1381",
+    "status": "success",
+    "record_count": 1007,
+    "address_count": 0,
+    "generated_files": [
+      "csv/un.csv",
+      "json/un.json",
+      "txt/un.txt"
+    ],
+    "error": null
+  },
+  {
+    "source_id": "ch-seco",
+    "jurisdiction": "CH",
+    "source_url": "https://www.sesam.search.admin.ch/sesam-search-web/pages/downloadXmlGesamtliste.xhtml?lang=en&action=downloadXmlGesamtlisteAction",
+    "resolved_url": "https://www.sesam.search.admin.ch/sesam-search-web/pages/downloadXmlGesamtliste.xhtml?lang=en&action=downloadXmlGesamtlisteAction",
+    "retrieved_at": "2026-10-29T04:27:47.525254+00:00",
+    "content_hash": "d537af350312c4a1592b6b36d31f88cd8a1e34091f4581979c7515d95bd41e41",
+    "status": "success",
+    "record_count": 8667,
+    "address_count": 2,
+    "generated_files": [
+      "csv/ch-seco.csv",
+      "json/ch-seco.json",
+      "txt/ch-seco.txt"
+    ],
+    "error": null
+  }
+]

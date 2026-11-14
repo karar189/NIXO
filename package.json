@@ -1,0 +1,32 @@
+{
+  "name": "nixo",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "setup": "pnpm install && (cd backend && npm ci) && ${PYTHON:-python3} -m venv agents/.venv && agents/.venv/bin/pip install -q -e 'agents[dev]'",
+    "dev": "scripts/dev.sh",
+    "dev:web": "pnpm --filter web dev",
+    "dev:agents": "cd agents && .venv/bin/uvicorn app.main:app --reload --port ${AGENTS_PORT:-8000}",
+    "dev:backend": "cd backend && npm run start:dev",
+    "demo": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "build:checker": "cd checker && cargo build --release --target wasm32-wasip2 && shasum -a 256 target/wasm32-wasip2/release/nixo_checker.wasm",
+    "build:contract": "cd contract && cargo near build non-reproducible-wasm",
+    "test": "cd checker && cargo test && cd ../contract && cargo test && cd ../agents && .venv/bin/pytest -q",
+    "kani": "cd checker && cargo kani",
+    "checker:run": "scripts/run-checker.sh",
+    "test:backend": "cd backend && npm test",
+    "fetch-history": "pnpm --filter web exec tsx ../scripts/fetch-history.ts",
+    "make-replay": "pnpm --filter web exec tsx ../scripts/make-replay.ts",
+    "build:checker-preview": "cd checker && cargo build --release --locked --target wasm32-wasip1 && cp target/wasm32-wasip1/release/nixo_checker.wasm ../web/lib/checker/nixo_checker_preview.wasm && shasum -a 256 ../web/lib/checker/nixo_checker_preview.wasm"
+  },
+  "pnpm": {
+    "packageExtensions": {
+      "@near-wallet-selector/meteor-wallet@10.1.4": {
+        "dependencies": {
+          "near-api-js": "6.5.1"
+        }
+      }
+    }
+  }
+}

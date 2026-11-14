@@ -1,0 +1,71 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  checker:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: checker } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show # installs the toolchain pinned in rust-toolchain.toml
+      - run: cargo test --locked
+      - run: cargo build --release --locked --target wasm32-wasip2
+      - name: Publish WASM hash
+        run: |
+          H=$(sha256sum target/wasm32-wasip2/release/nixo_checker.wasm | cut -d' ' -f1)
+          echo "checker_hash=$H" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nixo_checker.wasm
+          path: checker/target/wasm32-wasip2/release/nixo_checker.wasm
+
+  kani:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: model-checking/kani-github-action@v1
+        with:
+          working-directory: checker
+          args: --lib
+
+  contract:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: contract } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: cargo test --locked
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web lint
+      - run: pnpm --filter web build
+
+  agents:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: agents } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: agents/pyproject.toml }
+      - run: pip install -e ".[dev]" ruff
+      - run: ruff check .
+      - run: pytest -q
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build

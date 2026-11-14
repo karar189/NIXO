@@ -1,0 +1,16 @@
+{
+ "version": 1,
+ "subject": "nixo-alice.testnet",
+ "network": "testnet",
+ "source": "synthetic",
+ "note": "Synthetic demo history (not chain data): one inflow from a faucet, two small payments out. No path to any listed address.",
+ "fetched_at": "2026-11-13T00:00:00Z",
+ "max_hops": 6,
+ "expanded": ["nixo-alice.testnet", "faucet.testnet"],
+ "incomplete": [],
+ "edges": [
+  {"kind": "transfer", "from": "faucet.testnet", "to": "nixo-alice.testnet", "amount": "250000000000000000000000000", "token": "NEAR", "tx_hash": "demo-a1", "timestamp": "1794000000000000000"},
+  {"kind": "transfer", "from": "nixo-alice.testnet", "to": "bob.testnet", "amount": "40000000000000000000000000", "token": "NEAR", "tx_hash": "demo-a2", "timestamp": "1794000600000000000"},
+  {"kind": "transfer", "from": "nixo-alice.testnet", "to": "coffee.testnet", "amount": "1500000000000000000000000", "token": "NEAR", "tx_hash": "demo-a3", "timestamp": "1794001200000000000"}
+ ]
+}
