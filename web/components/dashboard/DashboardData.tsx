@@ -48,6 +48,20 @@ export function DashboardDataProvider({
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
+// Inert stand-in while there is no account yet: the wallet gate in
+// DashboardShell and static prerender at build time. Same shape, everything
+// loading, and no polling, so hidden pages render without network calls.
+const PLACEHOLDER: DashboardData = {
+  accountId: "",
+  balance: { data: null, error: null, loading: true, notFound: false },
+  quotes: { data: null, error: null, loading: true },
+  blockHeight: { data: null, error: null, loading: true },
+};
+
+export function DashboardDataPlaceholder({ children }: { children: ReactNode }) {
+  return <Ctx.Provider value={PLACEHOLDER}>{children}</Ctx.Provider>;
+}
+
 export function useDashboardData() {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error("useDashboardData must be used inside <DashboardDataProvider>");

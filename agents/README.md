@@ -18,7 +18,7 @@ pytest
 Anthropic, OpenAI, DeepSeek, NVIDIA NIM and NEAR AI Cloud (keys in the root
 `.env`, see `.env.example`). `llm_provider: "auto"` walks `LLM_PROVIDER_ORDER`
 and falls through on failure; naming a provider tries it first, optionally with
-`llm_model`.
+`llm_model`, then the others.
 
 - `GET /llm/providers`: configured providers and cool-downs
 - `GET /llm/models/{provider}`: chat models from the provider's catalog
@@ -32,12 +32,14 @@ rules, per-trade and total-spend caps, replay protection and atomic
 reservations; Agent A is the unrestricted baseline. Both share the paper
 adapter (`adapter.py`) and a frozen market snapshot.
 
-- `POST /nixo/runs` (header `X-Near-Account`): start a run (setup → task → 14
+- `POST /nixo/runs` (header `X-Near-Account`): start a run (setup → task → 17
   adversarial tests → revocation)
+- `GET /nixo/runs`: this account's runs, newest first (the last 20, kept in memory)
 - `GET /nixo/runs/{id}`: report (comparison, success criteria, tests)
 - `GET /nixo/runs/{id}/audit`: audit trail
 - `POST /nixo/runs/{id}/revoke`, `POST /nixo/runs/{id}/attempt`: owner console
 - `GET /nixo/assets`: every token NEAR Intents (1Click) can route, as `SYMBOL@chain` codes grouped by chain
+- `GET /nixo/defaults`: default run config and the execution/provenance/enforcement labels
 
 **Multi-token and cross-chain.** The task is a target portfolio of up to 4 assets (any
 1Click token, e.g. `NEAR@near`, `ETH@eth`, `SOL@sol`); agents always spend `USDC@near`.

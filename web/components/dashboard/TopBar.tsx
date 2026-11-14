@@ -16,7 +16,12 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const title =
-    { "/dashboard/trade": "AI Trading", "/dashboard/settings": "Settings", "/dashboard/clean-funds": "Clean funds" }[pathname] ?? "Overview";
+    {
+      "/dashboard/trade": "Swap",
+      "/dashboard/agents": "Agents & vaults",
+      "/dashboard/settings": "Settings",
+      "/dashboard/clean-funds": "Clean funds",
+    }[pathname] ?? "Overview";
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
