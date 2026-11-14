@@ -348,17 +348,18 @@ function SetupCard({
 
 function Progress({ run }: { run: RunSummary }) {
   const idx = PHASES.indexOf(run.phase);
+  const failed = run.status === "error"; // phase stays at the one that failed
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface/90 px-4 py-3 text-xs">
       {PHASES.map((p, i) => (
-        <span key={p} className={`inline-flex items-center gap-1.5 ${i < idx || run.status === "done" ? "text-clean" : i === idx ? "text-accent" : "text-muted"}`}>
-          {i < idx || run.status === "done" ? <CheckCircle2 className="size-3.5" /> : i === idx ? <Loader2 className="size-3.5 animate-spin" /> : <CircleDashed className="size-3.5" />}
+        <span key={p} className={`inline-flex items-center gap-1.5 ${i < idx || run.status === "done" ? "text-clean" : i === idx ? (failed ? "text-danger" : "text-accent") : "text-muted"}`}>
+          {i < idx || run.status === "done" ? <CheckCircle2 className="size-3.5" /> : i === idx ? (failed ? <XCircle className="size-3.5" /> : <Loader2 className="size-3.5 animate-spin" />) : <CircleDashed className="size-3.5" />}
           {p}{p === "task" && i === idx ? ` ${run.step}/${run.steps}` : ""}
           {i < PHASES.length - 1 && <span className="ml-1 text-line">—</span>}
         </span>
       ))}
       <span className="ml-auto font-mono text-muted">
-        {run.llm?.provider ? (run.llm.provider === "rules" ? "rules agent" : `${PROVIDER_SHORT[run.llm.provider] ?? run.llm.provider} · ${run.llm.model}`) : "resolving model…"}
+        {run.llm?.provider ? (run.llm.provider === "rules" ? "rules agent" : `${PROVIDER_SHORT[run.llm.provider] ?? run.llm.provider} · ${run.llm.model}`) : failed ? "model not resolved" : "resolving model…"}
       </span>
     </div>
   );
@@ -487,7 +488,7 @@ function TaskTable({ r }: { r: RunReport }) {
               </tr>
             ))}
             {n === 0 && (
-              <tr><td colSpan={3 + codes.length} className="px-3 py-6 text-center text-muted">Waiting for the first step…</td></tr>
+              <tr><td colSpan={3 + codes.length} className="px-3 py-6 text-center text-muted">{r.status === "error" ? "Run failed before the first step." : "Waiting for the first step…"}</td></tr>
             )}
           </tbody>
         </table>
@@ -709,6 +710,7 @@ const EVENT_TONE: Record<string, "clean" | "reject" | "mock" | "warn" | "muted" 
 function AuditTrail({ r, account, events, error }: { r: RunReport; account: string; events: AuditEvent[] | null; error: string | null }) {
   const [agent, setAgent] = useState<"all" | AgentId | "none">("all");
   const [type, setType] = useState("all");
+  const [exportNote, setExportNote] = useState<{ runId: string; text: string } | null>(null);
 
   const types = useMemo(() => Array.from(new Set((events ?? []).map((e) => e.event_type))).sort(), [events]);
   const shown = (events ?? []).filter(
@@ -716,7 +718,12 @@ function AuditTrail({ r, account, events, error }: { r: RunReport; account: stri
   );
 
   async function exportJson() {
-    const data = await nixoApi.audit(account, r.run_id);
+    setExportNote(null);
+    // The service keeps runs in memory (lost on restart, evicted after 20 newer ones): fall back to this page's copy.
+    const data = await nixoApi.audit(account, r.run_id).catch((e: Error) => {
+      setExportNote({ runId: r.run_id, text: `Couldn't fetch the audit trail (${e.message}); exported ${events ? "the copy already loaded in this page" : "the report only"}.` });
+      return events && { run_id: r.run_id, labels: r.labels, events };
+    });
     const blob = new Blob([JSON.stringify({ report: r, audit: data }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -749,6 +756,7 @@ function AuditTrail({ r, account, events, error }: { r: RunReport; account: stri
         <span className="text-[11px] text-muted">Service logs from the agents service, not on-chain events.</span>
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
+      {exportNote?.runId === r.run_id && <p role="status" className="text-xs text-amber-300">{exportNote.text}</p>}
       <div className="max-h-[420px] overflow-auto rounded-xl border border-line">
         <table className="w-full min-w-[900px] text-[11px]">
           <thead className="sticky top-0 bg-surface text-left text-[10px] uppercase tracking-wider text-muted">

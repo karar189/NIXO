@@ -33,8 +33,12 @@ cd agents   && .venv/bin/uvicorn app.main:app --reload --port 8000   # use the v
 ## AI trading (dashboard → AI Trading)
 
 - **Agent:** the agents service analyses the market regime (ATR, ADX, volatility, MA slope), shortlists strategies, and
-  plans one with Claude (`ANTHROPIC_API_KEY`) or a rule-based fallback. The paper engine then trades it on each tick
-  with TP/SL, liquidation, an optional Claude supervisor, and a risk gate.
+  plans one with an LLM or a rule-based fallback. The paper engine then trades it on each tick with TP/SL, liquidation,
+  an optional LLM supervisor (the provider that made the plan), and a risk gate.
+- **LLM providers:** Anthropic, OpenAI, DeepSeek, NVIDIA NIM and NEAR AI Cloud, each enabled by its API key
+  (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `NVIDIA_API_KEY`, `NEARAI_API_KEY`). "Auto" walks
+  `LLM_PROVIDER_ORDER` and falls through on failure; a named provider is tried first, then the others. With no key
+  set, the rule-based planner is used. Settings → AI model providers shows each provider's status and tests it.
 - **Paper orders:** pick asset, side, margin, leverage and TP/SL yourself. Every paper fill is priced by a real
   NEAR Intents 1Click dry-run quote, so fees and slippage are real; leverage is simulated.
 - **Live swaps (mainnet only):** spot NEAR/USDC through 1Click, signed in Meteor, tracked through

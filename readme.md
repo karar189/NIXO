@@ -110,7 +110,7 @@ Four NEAR components do real work in the MVP, named in code; Chain Signatures is
 ```bash
 git clone https://github.com/<your-org>/nixo
 cd nixo
-cp .env.example .env    # one file for every service; demo keys, NEARAI_API_KEY optional
+cp .env.example .env    # one file for every service; demo keys; NEARAI_API_KEY and other LLM keys optional
 pnpm setup              # pnpm install (web), npm ci (backend), Python venv + deps (agents)
 ```
 
@@ -126,7 +126,7 @@ Or one service at a time:
 
 | Service | Command | URL |
 |---|---|---|
-| web (NIXO pages + `/trade`) | `pnpm dev:web` | http://localhost:3000 |
+| web (NIXO pages + `/dashboard`) | `pnpm dev:web` | http://localhost:3000 |
 | agents (FastAPI) | `pnpm dev:agents` | http://localhost:8000/docs |
 | backend (NestJS waitlist) | `pnpm dev:backend` | http://localhost:4000 |
 
@@ -164,6 +164,20 @@ printf '{"account":"nixo-alice.testnet"}' | wasmtime run target/wasm32-wasip2/re
 # input_hash and verdict must match nixo-alice.testnet's on-chain certificate
 ```
 
+## Agents & vaults (NIXO v0.1 experiment)
+
+NIXO is also exploring capital that an owner assigns to an AI agent, with a provenance record and permissions enforced at the transaction boundary instead of in the agent's prompt. v0.1 is a controlled experiment, specified in [Nixo_agents.md](Nixo_agents.md): two agents get the same task, the same model and equivalent capital. **Agent B** trades through a policy vault that checks every request; **Agent A** is the unrestricted baseline.
+
+- **Task:** build a target portfolio of up to 4 assets from a `USDC@near` allocation. Assets are `SYMBOL@chain` codes (`NEAR@near`, `ETH@eth`, `SOL@sol`, ...) for any token NEAR Intents 1Click can route, across chains.
+- **Agent B's policy:** per-trade and total-spend caps, swaps only, allowed tokens, **allowed chains**, and **recipient pinning** (cross-chain output stays in the vault or goes to the owner's pinned address on that chain). The vault also checks the assignment, revocation, agent identity and replays, and reserves spend atomically.
+- **Adversarial suite:** 17 tests, t01–t14 from the spec plus the cross-chain t15–t17 (attacker recipient, forbidden chain, pinned payout), each mirrored on Agent A where it applies. At the end the owner revokes B and B's next request is rejected.
+- **Owner console:** revoke Agent B at any time, including mid-run; once the run finishes, send your own swap or withdraw requests as either agent.
+- **Market:** *recorded* (default) prices assets from Binance bars (flat at the 1Click spot price when there is no history) and checks each task asset with a 1Click dry quote first. *Synthetic* is deterministic and accepts any 1Click code (codes outside the built-in offline list are looked up in the live catalogue); its prices stay synthetic.
+
+**Where:** `/dashboard/agents` (wallet sign-in; runs belong to the connected account). **Settings → AI model providers** (`/dashboard/settings`) shows which providers are configured and tests each one. The agents service serves the experiment under `/nixo` and provider status under `/llm`; the endpoints are listed in [agents/README.md](agents/README.md).
+
+**LLM providers:** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `NVIDIA_API_KEY` and `NEARAI_API_KEY` in the root `.env` each enable one provider. `auto` walks `LLM_PROVIDER_ORDER` (default `anthropic,openai,deepseek,nvidia,nearai`) and falls through on any failure; a named provider is tried first, then the others in that order. A provider that fails on auth or credits is skipped for 10 minutes. The experiment picks its provider once at setup and both agents use it; the trading planner on `/dashboard/trade` uses the same providers. With no key set, the planner and both agents use rule-based logic instead.
+
 ## Repository layout
 
 ```text
@@ -181,13 +195,16 @@ nixo/
       outlayer.rs         # OutLayer request_execution + result parsing
       tests.rs            # unit tests: fail-closed, expiry, revocation, timelock
   web/                    # one Next.js app
-    app/(nixo)/           # / (Prove funds) and /verify (Exchange)
-    app/trade/            # trading app from NearArc: /trade, /trade/agent, /trade/settings, /trade/about
+    app/page.tsx          # / (landing)
+    app/(nixo)/           # /verify (Exchange)
+    app/dashboard/        # wallet app: trade (Swap), clean-funds (Prove funds), agents, settings; old /trade* URLs redirect
     components/VerifiedPanel.tsx
     app/api/request/      # demo signer for the two testnet accounts
     app/api/explain/      # NEAR AI Cloud explainer (certificate only)
     lib/nixo-sdk.ts       # dependency-free view client for is_clean
   agents/                 # FastAPI trading agents (from NearArc): analysis, planner, paper trading, 1Click
+    app/llm.py            # LLM providers: Anthropic, OpenAI, DeepSeek, NVIDIA NIM, NEAR AI Cloud
+    app/nixo/             # two-agent experiment: vault, paper adapter, agent runner, audit log
   backend/                # NestJS waitlist (from NearArc), isolated, npm
   marketplace/            # Swarma plan docs, parked (no code yet)
   docs/neararc/           # NearArc's original README and notes
@@ -212,6 +229,10 @@ nixo/
 | Encrypting the session to the enclave key | Not in MVP (no history leaves the enclave because none enters through public input) |
 | Chain Signatures cross-chain relayer | Not built, v2 |
 | Exchange `/verify` page | Real, calls `is_clean` live |
+| Agents & vaults: enforcement | **Off-chain**: the vault's checks and accounting are real code, but they run inside the agents service and its audit events are service logs, not on-chain proof. A NEAR contract is the next step |
+| Agents & vaults: execution | **Simulated**: both agents fill on a shared paper adapter against a frozen market snapshot; no funds move. Recorded mode uses Binance prices and live 1Click route and cost checks; cross-chain "delivered" means the vault would have released it |
+| Agents & vaults: provenance | **Stub**: each deposit gets its own provenance record, but its verification status comes from a demo stub, not source-of-funds checks |
+| Agents & vaults: run store | **In memory**: the last 20 runs per account, one running at a time, lost when the agents service restarts. Runs are scoped by an unsigned `X-Near-Account` header; signed (NEP-413) auth is next |
 
 Nothing is hidden: every mocked piece is tagged in the UI and in the README.
 

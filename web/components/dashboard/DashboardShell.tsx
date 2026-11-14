@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@/components/wallet/WalletProvider";
-import { DashboardDataProvider } from "./DashboardData";
+import { DashboardDataPlaceholder, DashboardDataProvider } from "./DashboardData";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { StatusBar } from "./StatusBar";
@@ -20,6 +20,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   // Always keep `{children}` in the tree. Omitting it during the wallet gate
   // drops route segments from rendering and trips Next.js instant-nav validation.
+  // The placeholder provider lets pages that read dashboard data render here
+  // (this branch is also what static prerender sees, since there is no wallet).
   if (!accountId) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
@@ -28,7 +30,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           {ready ? "Redirecting…" : "Restoring wallet session…"}
         </p>
         <div hidden aria-hidden="true">
-          {children}
+          <DashboardDataPlaceholder>{children}</DashboardDataPlaceholder>
         </div>
       </div>
     );

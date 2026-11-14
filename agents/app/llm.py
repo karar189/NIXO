@@ -252,7 +252,11 @@ _anthropic_client: anthropic.AsyncAnthropic | None = None
 def _anthropic() -> anthropic.AsyncAnthropic:
     global _anthropic_client
     if _anthropic_client is None:
-        kwargs: dict = {"timeout": settings.llm_timeout_seconds}
+        # max_retries=0: the SDK would otherwise retry timeouts, 429s and 5xx
+        # twice on its own, which overruns the "auto" budget (and the web
+        # proxy's 100 s) instead of falling through to the next provider.
+        # The provider chain in structured() is the only retry layer.
+        kwargs: dict = {"timeout": settings.llm_timeout_seconds, "max_retries": 0}
         if settings.anthropic_api_key:
             kwargs["api_key"] = settings.anthropic_api_key
         _anthropic_client = anthropic.AsyncAnthropic(**kwargs)
