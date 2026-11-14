@@ -1,1 +1,73 @@
-{"version":1,"subject":"nixo-mallory.testnet","network":"testnet","source":"placeholder","fetched_at":"","max_hops":6,"expanded":[],"incomplete":[{"account":"nixo-mallory.testnet","reason":"placeholder until the farstreet replay is generated"}],"edges":[]}
+{
+ "version": 1,
+ "subject": "nixo-mallory.testnet",
+ "network": "testnet-replay",
+ "source": "nearblocks-v3",
+ "replay_of": "farstreet4572.near",
+ "note": "Replay of the documented NEAR mainnet Binance-hack trail ending at farstreet4572.near. Only the subject name is changed to nixo-mallory.testnet. Transfers, pool-9009 swaps, amounts and tx hashes are as on mainnet (NearBlocks). Attribution of the listed seed wallet is unofficial (AMLBot / Shridlock).",
+ "fetched_at": "2026-11-14T17:07:00Z",
+ "max_hops": 6,
+ "expanded": [
+  "nixo-mallory.testnet",
+  "normalherb1811.near",
+  "85f0680ac65f94793877c17b87b4b526644a4219caee3c56ee47a4570da37129",
+  "d368b0079b34b0700b650eed72417b66467020fde05b8bf8a1fc8a375dc84484",
+  "efd224256518a7cacd209867963276efed302a8e222c013c43f4b1bd369ae5af"
+ ],
+ "incomplete": [],
+ "edges": [
+  {
+   "kind": "transfer",
+   "from": "efd224256518a7cacd209867963276efed302a8e222c013c43f4b1bd369ae5af",
+   "to": "d368b0079b34b0700b650eed72417b66467020fde05b8bf8a1fc8a375dc84484",
+   "amount": "21351909534127841155685023744",
+   "token": "NEAR",
+   "tx_hash": "Ec39nAANXRucmAxgHe3fMUTyKviEQMgHRHYKJ4Cnn7Do",
+   "timestamp": "1793945580929684051"
+  },
+  {
+   "kind": "transfer",
+   "from": "d368b0079b34b0700b650eed72417b66467020fde05b8bf8a1fc8a375dc84484",
+   "to": "85f0680ac65f94793877c17b87b4b526644a4219caee3c56ee47a4570da37129",
+   "amount": "10675000000000000000000000000",
+   "token": "NEAR",
+   "tx_hash": "88VKCF4y6ZzBKCjEgyXBrWrroS1PLxyZBpCTT6RXF6bW",
+   "timestamp": "1793945661906268142"
+  },
+  {
+   "kind": "transfer",
+   "from": "85f0680ac65f94793877c17b87b4b526644a4219caee3c56ee47a4570da37129",
+   "to": "normalherb1811.near",
+   "amount": "200000000000000000000000000",
+   "token": "NEAR",
+   "tx_hash": "8sgmUqq5UVNZcZnu5XRvVXA3qQJERevw1T5pvPNsS3ZU",
+   "timestamp": "1794050423856803131"
+  },
+  {
+   "kind": "swap",
+   "account": "normalherb1811.near",
+   "venue": "v2.ref-finance.near",
+   "pool_id": 9009,
+   "token_in": "wrap.near",
+   "amount_in": "54945000000000000000000000",
+   "token_out": "meili-5.smithii.near",
+   "amount_out": "83927644554669424556950",
+   "tx_hash": "vAqN1Njpya3ccbtje7kUmRMnYUA7qPV1h4eJcMX7JrH",
+   "timestamp": "1794054227472933458",
+   "token_created_at": "1793954132460124634"
+  },
+  {
+   "kind": "swap",
+   "account": "nixo-mallory.testnet",
+   "venue": "v2.ref-finance.near",
+   "pool_id": 9009,
+   "token_in": "meili-5.smithii.near",
+   "amount_in": "83916000000000000000000",
+   "token_out": "wrap.near",
+   "amount_out": "54651751599942789787019292",
+   "tx_hash": "2BpPDf9WAj9j4gaND5fyFdgvA9hRdkrpyjTkiAsd8MLQ",
+   "timestamp": "1794054247327370063",
+   "token_created_at": "1793954132460124634"
+  }
+ ]
+}

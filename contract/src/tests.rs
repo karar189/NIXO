@@ -142,6 +142,24 @@ fn caller_supplied_history_is_never_certified() {
 }
 
 #[test]
+fn live_nearblocks_history_is_certifiable() {
+    let mut c = setup();
+    let mut o = out("alice.testnet", "clean", None);
+    o["history_source"] = json!("nearblocks-v3:testnet@h=12345");
+    assert!(c.resolve_nixo(alice(), H1.into(), Ok(Some(o))).is_some());
+    assert!(c.is_clean(alice()));
+}
+
+#[test]
+fn unavailable_nearblocks_is_not_certifiable() {
+    let mut c = setup();
+    let mut o = out("alice.testnet", "rejected", Some("history_unavailable"));
+    o["history_source"] = json!("nearblocks-v3:unavailable");
+    assert!(c.resolve_nixo(alice(), H1.into(), Ok(Some(o))).is_none());
+    assert!(c.certs.get(&alice()).is_none());
+}
+
+#[test]
 fn non_clean_without_reason_is_refused() {
     let mut c = setup();
     assert!(c.resolve_nixo(alice(), H1.into(), Ok(Some(out("alice.testnet", "rejected", None)))).is_none());

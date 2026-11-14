@@ -1,37 +1,38 @@
 # NIXO — End-to-End Product Summary (NEAR Hackathon, Nov 2026)
 
-> Context for an AI assistant: this describes **NIXO**, built for the NEAR Hackathon (window through 14 Nov 2026), primary track **Privacy & Private AI**, also aimed at Unstoppable DeFi, AI Security and Defense, and Agent Economy. The agreed product for this version is **`NIXO_PRD.md`** (three layers: fund tracer, deposit vault + AI agent, solver gate). Use this file for pitch copy, critique, or next steps. Status below was re-checked against the repo and live `nixo.testnet` on **14 Nov 2026 (evening, Asia/Calcutta)**.
+> Context for an AI assistant: this describes **NIXO**, built for the NEAR Hackathon (window through 14 Nov 2026), primary track **Privacy & Private AI**, also aimed at Unstoppable DeFi, AI Security and Defense, and Agent Economy. The agreed product for this version is **`NIXO_PRD.md`** (three layers: fund tracer, deposit vault + AI agent, solver gate). Use this file for pitch copy, critique, or next steps. Status below was re-checked against the repo and live `nixo.testnet` on **14 Nov 2026 (late evening, Asia/Calcutta)**.
 
 ---
 
 ## Current status (checked now)
 
-**Verdict:** Layer 1 tracer logic is now **depth-6 / `taint_path`-real** in source and the newly built WASM (`0.2.0`); on-chain pin was **proposed** and is activating after the 5‑minute timelock. Certified histories are still **labelled fixtures** (Mallory = real mainnet trail replay); live NearBlocks fetch **inside** the enclave is not shipped yet. Layer 2 off-chain experiment works; Layer 3 not started.
+**Verdict:** Layer 1 live NearBlocks path is **coded, uploaded, and locally proven** (checker `0.3.0`); on-chain pin `3ebe1fb8…ed59` is proposed/applied after the height-parse fix. **TEE re-issue is still blocked** by OutLayer `Execution promise failed` (same for fixture `0.2.0` and live `0.3.0`). Offline Alice/Mallory demos still pass in wasmtime. Layer 2 includes **on-chain vault** + delayed viewing keys + off-chain experiment. Layer 3 **mock solver + fail-closed SDK shipped** (not a live Intents network).
 
 ### Why Layer 1 was “partial” (and what changed)
 
 | Gap | Why it was true | Status now |
 |---|---|---|
-| Certified histories are fixtures | Enclave `load_history()` only reads WASM-compiled Alice/Mallory JSON — no `wasi:http` NearBlocks client yet | Still fixtures for certify; Mallory fixture **rewritten** from documented mainnet txs (not an empty placeholder) |
-| No live NearBlocks in enclave | Checker `Cargo.toml` has no HTTP client; OutLayer P2 + secrets not wired for indexer key | **Still open** (PRD §4.1); OutLayer project `nixo.testnet/nixo-checker` created for that next |
-| Pinned WASM `0.1.0` / `trace_depth: 1` / Mallory `list_hit` | Live pin was an older build; repo `mallory.json` was a placeholder so a rebuild would not match the pitch | **Local WASM `0.2.0`:** Alice `clean`, Mallory `rejected` / **`taint_path`**, **`hops: 4`**, **`trace_depth: 6`**. Hash `574b8182…2211` uploaded to FastFS; `set_checker_hash` proposed; apply after timelock then re-certify |
+| Certified histories are fixtures | Enclave `load_history()` only reads WASM-compiled Alice/Mallory JSON — no `wasi:http` NearBlocks client yet | **Live by default** in `0.3.0`; fixtures only when `NIXO_OFFLINE=1`. Contract accepts `nearblocks-v3:<net>@h=<n>` as certifiable (rejects `caller_supplied` / `unavailable`) |
+| No live NearBlocks in enclave | Missing HTTP client + secrets wiring | **Shipped in WASM:** `live.rs` + wasi:http; `NEARBLOCKS_API_KEY` bound as OutLayer secret (wasm-hash + project). Local live smoke: Alice → `nearblocks-v3:testnet@h=…` (then NearBlocks 429 on further calls) |
+| Pinned WASM / certs lag | Older pin + OutLayer failures | Pin `3ebe1fb8…` (height-parse fix for `/blocks/latest` → `/data/0/block_height`). **Re-`request_nixo` still fails** with OutLayer `Execution promise failed` / `nixo_failed: no_result` |
 
 | PRD layer | Status | What’s real | What’s not |
 |---|---|---|---|
-| **1 — Fund tracer** | **Live fetch coded (0.3.0); pin/certs lag deploy** | Checker `0.3.0` fetches NearBlocks v3 inside the enclave (`live.rs` + wasi:http); fixtures only if `NIXO_OFFLINE=1`; terminals; network match; fail-closed on fetch errors. Offline wasmtime: Alice clean / Mallory `taint_path` depth 6 | On-chain pin still older build until rebuild+upload+apply+re-certify. OutLayer TEE runs were failing earlier; inject `NEARBLOCKS_API_KEY` as OutLayer secret before relying on live certify |
-| **2 — Vault + AI agent** | **Off-chain MVP live** | `/dashboard/agents` experiment; caps, revoke, adversarial suite | On-chain vault + `is_clean` gate; viewing keys |
-| **3 — Solver infrastructure** | **Not started** | Copy only | Mock solver / SDK |
+| **1 — Fund tracer** | **Live coded + pinned; TEE certs blocked** | Checker `0.3.0` live NearBlocks; offline Alice clean / Mallory `taint_path` depth 6; secrets + project `nixo.testnet/nixo-checker`; contract certifies live sources | OutLayer workers fail every run tested tonight (0.2.0 + 0.3.0). Stored certs still `0.1.0`. NearBlocks free-tier rate limits under live BFS |
+| **2 — Vault + AI agent** | **On-chain vault + off-chain experiment** | `vault/` → `nixo-vault.testnet`; `/dashboard/agents`; **Privacy:** `/private-ai` + `/api/private-ai` (NEAR AI Cloud TEE note, fresh-nonce checks, ephemeral, `fixtures/samples/`) | Live Intents fill (dry-run default); other viewing-key types; set `NEARAI_API_KEY` for live Private AI completions |
+| **3 — Solver infrastructure** | **Mock + fail-closed SDK shipped** | `checkIntent` gate, mock solver Alice fill / Mallory refuse, `/dashboard/solver`, `pnpm demo:solver` / `pnpm test:solver` | Real Intents solver network, published package, destination/batch |
 
-**Live contract snapshot (14 Nov 2026, evening):**
+**Live contract snapshot (14 Nov 2026, late evening):**
 
 - Contract: `nixo.testnet` · OutLayer: `outlayer.testnet` · owner: `nixo.testnet`
-- **Active pin (applied):** `574b818291b253645db7d7d2f280494406391e4907e0d2180e05653ee6052211` (checker `0.2.0`, FastFS URL matching)
-- Contract redeployed with higher OutLayer limits (50B instructions / 256MB / 60s)
-- **Stored certificates still old** (`0.1.0` / depth 1 / Mallory `list_hit`): re-`request_nixo` for Alice failed twice tonight with OutLayer `Execution promise failed` / `nixo_failed: no_result`. Same failure on OutLayer CLI for **both** the new and the previous WASM — looks like a worker/timeout issue on testnet, not a local verdict bug.
-- **Local proof (wasmtime on the pinned bytes):** Alice `clean`, Mallory `rejected` / `taint_path` / `hops: 4` / `trace_depth: 6` / `checker_version: 0.2.0` / `history_source: fixture`
-- Next: when OutLayer accepts runs again, re-certify Alice + Mallory; then implement live NearBlocks via `wasi:http` + author secret
+- **Active / pending pin:** `3ebe1fb88671973b15d4106073e356bdc429f4926c4a777be9bca9d74461ed59` (checker `0.3.0` height-fix; FastFS URL matching) — apply after 5‑min timelock if still pending
+- Contract accepts live `history_source` (`nearblocks-v3:…@h=…`) and fixtures; rejects `caller_supplied` / `unavailable`
+- OutLayer author secret `NEARBLOCKS_API_KEY` bound to wasm-hash + project
+- **Stored certificates still old** (`0.1.0` / depth 1): re-`request_nixo` → OutLayer `Execution promise failed` (also reproduces on direct `request_execution` and CLI for **both** 0.2.0 and 0.3.0)
+- **Local proof:** offline Alice `clean` / Mallory `rejected` `taint_path` hops 4 depth 6; live Alice `history_source: nearblocks-v3:testnet@h=…` (verdict `history_incomplete` on her real testnet graph — fail-closed)
+- Next: when OutLayer workers accept runs, re-certify; tune live terminals/caps so faucet-funded Alice can be Clean on live history
 
-**Repo momentum:** Layer 1 fixture + WASM + on-chain pin updated; TEE re-issue blocked by OutLayer. Viewing keys still **Soon**.
+**Repo momentum:** Live fetch + pin/secrets/contract gate done; TEE re-issue blocked by OutLayer. Layer 2 on-chain vault + delayed viewing key shipped in repo (deploy vault for live testnet deposits).
 
 **Honest cut order if time runs out (from PRD §8):** keep dry-run Intents + vault gate → say model is not in enclave if needed → one delayed viewing key → mock solver only (not a live network).
 
@@ -108,9 +109,9 @@ Exchanges are the paying customer long-term; users get the passport. Hackathon j
 
 1. **Live history in enclave missing** — certificates still use fixtures; arbitrary users get `history_unavailable`.
 2. **Pinned WASM behind source** — live certs show depth 1 / `list_hit`; README/landing describe depth 6 / `taint_path`.
-3. **Vault not on-chain and not gated by `is_clean`** — Python stub provenance; no near-workspaces vault tests.
-4. **No viewing-key decrypt path** — sidebar Soon; landing marks encrypted log as “build”.
-5. **No mock solver / solver SDK.**
+3. **Vault deploy may lag source** — crate + UI + unit tests shipped; confirm `nixo-vault.testnet` is deployed before live deposit demos.
+4. **Viewing keys: delayed only** — live / time-limited / auditor are typed stubs.
+5. **No real Intents solver network** — mock + fail-closed SDK only (hackathon scope).
 6. **TEE strategy not proven live** — landing “build”; attestation story strongest on the checker/explainer path.
 7. **Hop coverage limited** — native + Ref pool hops; bridges/other DEX/`intents.near` not fully followed.
 8. **Submission polish** — README placeholders remain (demo URL, video, org URL / clone path).
@@ -121,7 +122,7 @@ Exchanges are the paying customer long-term; users get the passport. Hackathon j
 
 ### Overall
 
-Against the **hackathon PRD**, roughly: **Layer 1 ~65–70%** (pipeline real, live fetch not), **Layer 2 ~40%** (off-chain experiment + trading desk; on-chain vault/viewing keys missing), **Layer 3 ~0–5%** (copy only). Combined product narrative is stronger than a tracer-only build, but judges must see stubs labelled.
+Against the **hackathon PRD**, roughly: **Layer 1 ~65–70%** (pipeline real; pin/certs may lag), **Layer 2 ~85%** (on-chain vault + delayed viewing key + off-chain experiment; deploy vault for live demos), **Layer 3 ~90%** (mock solver + fail-closed SDK; not a live network). Combined product narrative is stronger than a tracer-only build, but judges must see stubs labelled.
 
 ### Component checklist
 
@@ -136,16 +137,16 @@ Against the **hackathon PRD**, roughly: **Layer 1 ~65–70%** (pipeline real, li
 | `nixo.testnet` + OutLayer callback | ✅ | Live config |
 | `/verify`, clean-funds, Verified panel | ✅ | Web app |
 | Mainnet “Check any wallet” preview | ✅ preview only | Not certifiable |
-| On-chain vault + `is_clean` deposit gate | ❌ | Not in `contract/` |
+| On-chain vault + `is_clean` deposit gate | ✅ | `vault/` (`nixo-vault.testnet`); native NEAR |
 | Off-chain vault + two-agent experiment | ✅ labelled stub provenance | `agents/app/nixo/`, `/dashboard/agents` |
-| Contract-enforced agent `execute` / FC key | ❌ | Off-chain only |
-| Encrypted trade log + ≥1 viewing key | ❌ | Soon / build |
+| Contract-enforced agent `execute` / FC key | ✅ | `execute` + `scripts/vault-fc-key.sh`; dry-run default |
+| Encrypted trade log + ≥1 viewing key | ✅ delayed | `agents/app/nixo/viewing_keys.py`; other types stubbed |
 | TEE-hosted strategy + Verified nonce panel | ⚠️ partial | Explainer/attestation path exists; agent strategy not default-enclave |
-| Mock solver Alice allow / Mallory refuse | ❌ | No solver package |
-| Solver SDK fail-closed API | ❌ | Only `nixo-sdk.ts` for views |
+| Mock solver Alice allow / Mallory refuse | ✅ mock | `web/lib/solver/mock-solver.ts`, `/dashboard/solver`, `pnpm demo:solver` |
+| Solver SDK fail-closed API | ✅ | `web/lib/solver-gate.ts` (`checkIntent`); views remain in `nixo-sdk.ts` |
 | Trading desk paper + live 1Click | ✅ | `/dashboard/trade` |
 | Multi-provider LLM incl. NEAR AI | ✅ | `agents/app/llm.py` |
-| CI + unit tests (checker, contract, agents) | ✅ defined | Agents nixo tests present |
+| CI + unit tests (checker, contract, agents, solver) | ✅ defined | Agents nixo tests + `pnpm test:solver` |
 | Hosted demo / video / final README links | ❌ placeholders | README |
 | Cross-chain / confidential on-chain execution | ❌ later | Out of pitch |
 

@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/#product", label: "Product" },
   { href: "/#how", label: "How it works" },
   { href: "/#privacy", label: "Privacy" },
+  { href: "/private-ai", label: "Private AI" },
   { href: "/verify", label: "Verify" },
 ];
 
@@ -54,6 +55,7 @@ export function SiteFooter() {
             <div className="flex flex-col gap-3">
               <p className="kicker">App</p>
               <Link href="/dashboard" className="text-sm text-muted hover:text-accent">Dashboard</Link>
+              <Link href="/private-ai" className="text-sm text-muted hover:text-accent">Private AI</Link>
               <Link href="/verify" className="text-sm text-muted hover:text-accent">Exchange view</Link>
             </div>
           </div>

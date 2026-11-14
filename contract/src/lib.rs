@@ -125,7 +125,7 @@ impl Nixo {
                 outlayer::source(&self.checker.url, &self.checker.hash),
                 Some(outlayer::resource_limits()),
                 Some(outlayer::input_data(&account)),
-                None,
+                Some(outlayer::secrets_ref(&self.owner)),
                 Some("Json".to_string()),
                 Some(account.clone()),
             )
@@ -172,10 +172,10 @@ impl Nixo {
         if self.revoked.contains(checker_hash) {
             return Err("checker_revoked");
         }
-        // Only histories compiled into the pinned checker can be certified. A
-        // caller-supplied history (the web "check any wallet" preview) could
-        // leave edges out, so it is never written as a certificate.
-        if out.history_source != "fixture" {
+        // Caller-supplied history (web "check any wallet" preview) must never
+        // be certified — the caller could omit edges. Live NearBlocks fetches
+        // inside the enclave and labelled offline fixtures are certifiable.
+        if !certifiable_history_source(&out.history_source) {
             return Err("uncertifiable_history_source");
         }
         // "warn": a taint path whose only evidence is a weak pool link. Stored
@@ -273,6 +273,14 @@ impl Nixo {
         emit("checker_revoked", json!({ "hash": checker_hash }));
         self.revoked.insert(checker_hash);
     }
+}
+
+/// `fixture` (offline labelled) or a successful live pin `nearblocks-v3:<net>@h=<n>`.
+fn certifiable_history_source(src: &str) -> bool {
+    src == "fixture"
+        || (src.starts_with("nearblocks-v3:")
+            && !src.contains("unavailable")
+            && src.contains("@h="))
 }
 
 #[cfg(test)]

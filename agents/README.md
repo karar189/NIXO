@@ -30,6 +30,11 @@ and falls through on failure; naming a provider tries it first, optionally with
 **Spec:** [`docs/Nixo_agents.md`](../docs/Nixo_agents.md) (defers to the PRD on
 product language). **UI:** `/dashboard/agents`.
 
+On-chain vault helpers: `GET /nixo/onchain`, deposit views, `POST /nixo/onchain/execute-args`.
+Set `NIXO_VAULT_CONTRACT` / `NEXT_PUBLIC_NIXO_VAULT_CONTRACT` (default `nixo-vault.testnet`).
+
+Delayed viewing keys: `POST /nixo/viewing/append|offer|redeem`, `POST /nixo/viewing/keypair`.
+
 Two agents, same task, equivalent capital. Agent B trades through the vault
 (`vault.py`), which enforces assignment, revocation, identity, action/asset
 rules, per-trade and total-spend caps, replay protection and atomic

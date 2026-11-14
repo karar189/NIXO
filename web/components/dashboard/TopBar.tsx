@@ -19,6 +19,7 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
     {
       "/dashboard/trade": "Swap",
       "/dashboard/agents": "Agents & vaults",
+      "/dashboard/solver": "Mock solver",
       "/dashboard/settings": "Settings",
       "/dashboard/clean-funds": "Clean funds",
     }[pathname] ?? "Overview";

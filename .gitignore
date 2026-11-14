@@ -9,6 +9,7 @@ fixtures/mainnet/cache/
 
 # Python
 .venv/
+.venv-nearai/
 __pycache__/
 *.pyc
 .pytest_cache/

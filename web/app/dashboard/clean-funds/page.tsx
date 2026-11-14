@@ -12,8 +12,10 @@ import {
 } from "@/lib/config";
 import { getCertificate, nsToDate, type CertificateView } from "@/lib/nixo-sdk";
 import { CertificateCard } from "@/components/CertificateCard";
+import { NearAiVerifiedPanel } from "@/components/NearAiVerifiedPanel";
 import { MockTag } from "@/components/MockTag";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import type { AttestationCheck } from "@/lib/nearai";
 
 type Phase = "idle" | "sending" | "waiting" | "done" | "error";
 const POLL_MS = 2000;
@@ -44,7 +46,15 @@ export default function CleanFundsPage() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [view, setView] = useState<CertificateView | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [explain, setExplain] = useState<{ text?: string; error?: string; attestation?: { fetched: boolean; nonce_echoed: boolean } } | null>(null);
+  const [explain, setExplain] = useState<{
+    text?: string;
+    error?: string;
+    model?: string;
+    nonce?: string;
+    completion_id?: string;
+    checks?: AttestationCheck[];
+    attestation?: { fetched: boolean; nonce_echoed: boolean };
+  } | null>(null);
 
   const busy = phase === "sending" || phase === "waiting";
 
@@ -230,11 +240,24 @@ export default function CleanFundsPage() {
               <p className="mt-2 text-xs text-muted">
                 Model saw only the public certificate. Attestation {explain.attestation.fetched ? "fetched" : "unavailable"}
                 {explain.attestation.fetched && (explain.attestation.nonce_echoed ? ", bound to a fresh nonce" : ", nonce not found in report")}.
+                Nothing retained server-side after this response.
               </p>
             )}
           </div>
+          {explain?.checks && explain.model && explain.nonce && (
+            <NearAiVerifiedPanel
+              model={explain.model}
+              nonce={explain.nonce}
+              verified={Boolean(explain.attestation?.nonce_echoed)}
+              checks={explain.checks}
+              completionId={explain.completion_id}
+            />
+          )}
           <Link href={`/verify?account=${view.certificate.account}`} className="inline-block text-sm underline">
             Verify as an exchange →
+          </Link>
+          <Link href="/private-ai" className="ml-4 inline-block text-sm underline">
+            Private AI samples →
           </Link>
         </section>
       )}

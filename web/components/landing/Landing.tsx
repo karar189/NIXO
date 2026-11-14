@@ -49,7 +49,7 @@ const TRAIL: { who: string; via?: string; amount?: string; tx?: string[] }[] = [
 const PRIVACY: { icon: typeof Lock; t: string; s: string; d: string; status: Status; tone: "white" | "yellow" | "gradient" }[] = [
   { icon: ScanSearch, t: "Fund history checked without revealing it", s: "Clean-funds certificate", d: "The enclave traces where money came from. Only the verdict leaves it: never balances, trades or counterparties.", status: "live", tone: "white" },
   { icon: Lock, t: "Private strategy", s: "TEE", d: "The agent's strategy is generated inside a secure enclave on NEAR AI Cloud, with its attestation checked on a fresh nonce every run.", status: "build", tone: "yellow" },
-  { icon: KeyRound, t: "Encrypted trade log", s: "Viewing keys", d: "Trades are recorded encrypted. Followers and auditors see only what a viewing key unlocks, for the period it covers.", status: "build", tone: "gradient" },
+  { icon: KeyRound, t: "Encrypted trade log", s: "Viewing keys", d: "Trades are recorded encrypted. A delayed viewing key unlocks the log for its scope; explorers still show vault and Intents transfers.", status: "live", tone: "gradient" },
 ];
 
 const TICKER_A = ["Private strategy (TEE)", "Encrypted trade log", "Fund history checked, never revealed", "NEAR Intents", "Intel TDX · OutLayer", "6-hop trace", "OFAC · EU · UK · UN · SECO"] as const;

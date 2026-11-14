@@ -39,10 +39,11 @@ Opens `http://localhost:3000`:
 1. **Certify Alice.** **Prove my funds are clean** as `nixo-alice.testnet` → pending → ✅ Clean certificate (verdict, expiry, checker version, history source — **no hop path**).
 2. **Reject Mallory.** Switch to `nixo-mallory.testnet` (replay of a real mainnet trail from `farstreet4572.near`) → ❌ Rejected with a reason. Live certificates today use fixture history; see [What is real vs mocked](#what-is-real-vs-mocked-in-this-version).
 3. **Exchange view.** Open `/verify`, paste `nixo-alice.testnet` → live `is_clean` → ✅. Expand the Verified panel (WASM hash, OutLayer attestation, list snapshot, Kani link).
-4. **Agents & vaults (Layer 2 experiment).** `/dashboard/agents` — two agents, same task; Agent B is constrained by an off-chain vault (caps, revoke, adversarial suite). Provenance is labelled **stub**; enforcement is not yet on-chain.
-5. **Optional preview.** On `/verify`, **Check any NEAR wallet** traces mainnet accounts (e.g. `farstreet4572.near`) with hop paths — preview only, not certifiable.
+4. **Agents & vaults (Layer 2).** `/dashboard/agents` — on-chain vault panel (`nixo-vault.testnet`: deposit gated by `is_clean`, assign / execute dry-run / revoke / withdraw), delayed viewing-key path for the encrypted trade log, plus the off-chain two-agent adversarial experiment.
+5. **Mock solver (Layer 3).** `/dashboard/solver` — paper fill: Alice allowed, Mallory refused via fail-closed `checkIntent`. Or `pnpm demo:solver` / `pnpm test:solver`. Not a live Intents network.
+6. **Optional preview.** On `/verify`, **Check any NEAR wallet** traces mainnet accounts (e.g. `farstreet4572.near`) with hop paths — preview only, not certifiable.
 
-**Not yet in the live demo (PRD cut list):** on-chain vault deposit gate wired to `is_clean`, encrypted trade log + viewing-key decrypt, mock solver Alice-fill / Mallory-refuse. Those are in scope for this version; do not pitch them as live until they are.
+**Deploy note:** run `scripts/deploy-vault-testnet.sh` before pitching on-chain deposits as live on testnet.
 
 ---
 
@@ -94,11 +95,17 @@ The vault holds funds; the agent never does. Target behaviour (PRD):
 5. Owner can revoke and withdraw. Prompt-injected “pay a blocked destination” fails at the contract, not only in the UI.
 6. Encrypted trade log + at least one viewing-key path (a delayed key is enough for this version). Viewing keys do **not** hide explorer-visible transfers.
 
-**Shipped today:** an off-chain two-agent experiment at `/dashboard/agents` (see [Agents & vaults](#agents--vaults-layer-2-experiment)) that proves constrained vs unconstrained agents with stub provenance. Moving enforcement on-chain and wiring deposits to `is_clean` is the remaining Layer 2 work.
+**Shipped today:**
+- On-chain vault crate [`vault/`](vault/) → `nixo-vault.testnet` (native NEAR): `deposit` → `is_clean` gate, provenance, `assign` / `execute` / `revoke` / `withdraw`, trade-hash commits. Unit tests cover clean accept, dirty refund, caps, injection, revoke, rollback.
+- `/dashboard/agents` on-chain panel + FC-key helper [`scripts/vault-fc-key.sh`](scripts/vault-fc-key.sh).
+- Delayed viewing-key encrypt/redeem path in the agents service (live / time-limited / auditor typed but not shipped).
+- Off-chain two-agent adversarial experiment (stub provenance) still available for the comparison suite.
 
 ### Layer 3 — Solver infrastructure
 
-Middleware any NEAR Intents solver (or routing agent) can call before fill: allow only when `is_clean` is true; missing / expired / warn / rejected / transport failure → refuse. Hackathon scope: a **mock solver** that fills Alice and refuses Mallory, plus a documented fail-closed SDK shape — not a production solver network.
+Middleware any NEAR Intents solver (or routing agent) can call before fill: allow only when `is_clean` is true; missing / expired / warn / rejected / transport failure → refuse.
+
+**Shipped today:** fail-closed [`web/lib/solver-gate.ts`](web/lib/solver-gate.ts) (`checkIntent`) + mock solver [`web/lib/solver/mock-solver.ts`](web/lib/solver/mock-solver.ts), demo UI at `/dashboard/solver`, `pnpm demo:solver` (live Alice/Mallory) and `pnpm test:solver` (mocked). Paper fill only — not a production solver network.
 
 ---
 
@@ -116,7 +123,7 @@ Middleware any NEAR Intents solver (or routing agent) can call before fill: allo
 | 1 | Checker | Deterministic rules inside the TEE | Rust → `wasm32-wasip2` on OutLayer (Intel TDX) |
 | 2 | Certificate contract | Pin hash, OutLayer callback, certificates, `is_clean` | `nixo.testnet`, `near-sdk` 5 |
 | 3 | Lists + history | Sanctions / hacker lists; NearBlocks v3 (target) or labelled fixtures | Compiled lists `data-2026-10-29` |
-| 4 | Desk / SDKs | Certify UI, `/verify`, in-app view client; solver SDK later | Next.js, `web/lib/nixo-sdk.ts` |
+| 4 | Desk / SDKs | Certify UI, `/verify`, view client + fail-closed solver gate | Next.js, `nixo-sdk.ts`, `solver-gate.ts` |
 | 5 | Explainer | Plain-English note from the **public** certificate only | NEAR AI Cloud + fresh-nonce attestation check |
 
 ### What is hidden from whom
@@ -140,7 +147,7 @@ A TEE proves the code was not tampered with. NIXO also argues the decision core 
 - **OutLayer (Intel TDX)** — runs the Checker. `/checker`, `/contract/src/outlayer.rs`.
 - **`nixo.testnet`** — `request_nixo`, `resolve_nixo`, `is_clean`, `get_certificate`, hash governance (`set` / `apply` / `cancel` / `revoke_checker_hash`).
 - **NEAR Intents** — trading desk dry-run and live spot swaps; vault allowlist target for agent execution (PRD). History-inside-enclave via NearBlocks v3 is this version’s tracer goal (fixtures labelled until then).
-- **NEAR AI Cloud** — certificate explainer (`/web/app/api/explain`); multi-provider LLM path for agents including `nearai`. TEE-hosted strategy with Verified panel is in scope if reliable; otherwise say the model is not yet in the enclave.
+- **NEAR AI Cloud** — Privacy track surface at `/private-ai` (fictional samples, ephemeral TEE note, Verified panel). Also certificate explainer (`/api/explain`). Multi-provider LLM path for agents including `nearai`. Full quote verify via `scripts/nearai_smoke.py` (`nearai-inference-sdk`).
 - **Chain Signatures / cross-chain registries** — later. Not in this pitch as shipped.
 
 ---
@@ -171,6 +178,18 @@ pnpm dev                # web :3000, agents :8000, backend :4000
 | Backend (waitlist) | `pnpm dev:backend` | http://localhost:4000 |
 
 Tests: `pnpm test`, `pnpm test:backend`, `pnpm kani`.
+
+### Private AI (NEAR AI Cloud)
+
+1. Create an API key at [cloud.near.ai](https://cloud.near.ai) and set `NEARAI_API_KEY` in root `.env` (and `web/.env` if you run Next alone).
+2. Minimal attested smoke (Python ≥ 3.12):
+
+```bash
+python3.12 -m venv .venv-nearai && .venv-nearai/bin/pip install nearai-inference-sdk==0.3.0 httpx
+NEARAI_API_KEY=… .venv-nearai/bin/python scripts/nearai_smoke.py
+```
+
+3. UI: open http://localhost:3000/private-ai — fictional samples only; `POST /api/private-ai` keeps **nothing** server-side after the response (`Cache-Control: no-store`, no DB/disk write).
 
 ### Checker alone / local re-run
 
@@ -211,11 +230,12 @@ nixo/
     Nixo_agents.md        # Layer 2 experiment spec
   checker/                # Rust → WASM (OutLayer TDX)
   contract/               # nixo.testnet certificate contract
+  vault/                  # nixo-vault.testnet Layer 2 deposit vault
   web/                    # Next.js: landing, /verify, /dashboard/*
-  agents/                 # FastAPI: trading + app/nixo experiment
+  agents/                 # FastAPI: trading + app/nixo experiment + viewing keys
   backend/                # NestJS waitlist
-  fixtures/               # Alice / Mallory + mainnet cache
-  scripts/                # dev, deploy, run-checker, fetch-history, …
+  fixtures/               # Alice / Mallory + mainnet cache + samples/ (Private AI)
+  scripts/                # nearai_smoke, run-checker, deploy, …
   .github/workflows/      # checker, Kani, contract, web, agents, backend
 ```
 
@@ -232,11 +252,11 @@ nixo/
 | Sanctions lists | Real snapshot `data-2026-10-29` |
 | Hacker list | One entry; unofficial public attribution (AMLBot / Shridlock); say so in demos |
 | `/verify` “Check any wallet” | Preview only (`caller_supplied`); different WASI build hash |
-| NEAR AI explainer | Real; nonce echo checked; full quote verify later |
-| Agents vault / provenance / execution | Off-chain / stub / simulated (labelled in UI) |
-| Viewing keys / encrypted trade log | Not shipped (sidebar Soon) |
-| Mock solver + solver SDK | Not shipped |
-| On-chain vault gated by `is_clean` | Not shipped |
+| NEAR AI explainer / Private AI | Real: `/private-ai` + `POST /api/private-ai` (TEE model, fresh-nonce attestation checks, **no server retention**). Sample docs in `fixtures/samples/`. Full DCAP/NRAS: `scripts/nearai_smoke.py` |
+| Agents off-chain experiment | Off-chain / stub provenance / simulated (labelled) |
+| On-chain vault gated by `is_clean` | Shipped in `vault/` (`nixo-vault.testnet`); deploy for live testnet |
+| Viewing keys / encrypted trade log | Delayed key path in agents service; other types stubbed |
+| Mock solver + fail-closed SDK | Shipped (paper fill; not a live Intents network) — `/dashboard/solver`, `pnpm demo:solver`, `pnpm test:solver` |
 | Chain Signatures cross-chain relayer | Not built (later) |
 
 Every mocked piece should stay tagged in the UI and here. Judges should see what is live, fixture, or later in under a minute.
