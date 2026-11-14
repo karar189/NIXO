@@ -3,6 +3,8 @@
 import { formatNear, yoctoToNear } from "@/lib/near/rpc";
 import { formatPct, formatUsd } from "@/lib/market";
 import { useDashboardData } from "./DashboardData";
+import { useAgentSession } from "./AgentSession";
+import { fmtUsd, humanize } from "@/lib/trading/format";
 import { Skeleton } from "./Card";
 
 type Kpi = {
@@ -15,6 +17,11 @@ type Kpi = {
 
 export function KpiRow() {
   const { balance, quotes } = useDashboardData();
+  const agent = useAgentSession();
+  const session = agent?.status?.session ?? null;
+  const agentRunning = Boolean(agent?.running && session);
+  const stats = agent?.stats ?? null;
+  const agentPnl = stats ? stats.total_pnl + stats.unrealized_pnl : null;
   const near = quotes.data?.near;
   const balanceFailed = Boolean(balance.error) && !balance.notFound && !balance.data;
   const totalNear = balance.data ? yoctoToNear(balance.data.total) : balance.notFound ? 0 : null;
@@ -51,8 +58,24 @@ export function KpiRow() {
           : "Fetching price…",
       tone: near ? (near.change24h >= 0 ? "up" : "down") : quotes.error ? "error" : "muted",
     },
-    { label: "Active agents", value: "0", sub: "Create your first agent", tone: "muted" },
-    { label: "24h agent P&L", value: "—", sub: "No trades yet", tone: "muted" },
+    {
+      label: "Active agents",
+      value: agent ? (agentRunning ? "1" : "0") : null,
+      sub: agentRunning && session
+        ? `${session.pair} · ${session.strategy ? humanize(session.strategy.strategy) : session.mode}`
+        : agent?.error
+          ? "Agents service unreachable"
+          : "Create your first agent",
+      tone: agent?.error ? "error" : "muted",
+    },
+    {
+      label: "Agent P&L",
+      value: agentPnl !== null ? fmtUsd(agentPnl, true) : agent?.error ? "—" : agent ? "—" : null,
+      sub: stats
+        ? `${stats.total_trades} trade${stats.total_trades === 1 ? "" : "s"} this session · lifetime ${fmtUsd(stats.lifetime_pnl, true)}`
+        : "No trades yet",
+      tone: agentPnl === null || agentPnl === 0 ? "muted" : agentPnl > 0 ? "up" : "down",
+    },
   ];
 
   const toneClass = {

@@ -12,13 +12,13 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`flex flex-col rounded-2xl border border-line bg-surface/90 p-5 ${className}`}>
+    <section className={`flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface/90 p-5 ${className}`}>
       {(title || action) && (
         <header className="mb-4 flex items-center justify-between gap-3">
           {title && (
-            <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted">{title}</h2>
+            <h2 className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.16em] text-muted">{title}</h2>
           )}
-          {action}
+          <div className="shrink-0">{action}</div>
         </header>
       )}
       {children}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Check, ChevronDown, Copy, ExternalLink, LogOut, Menu } from "lucide-react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { NetworkToggle } from "@/components/wallet/NetworkToggle";
 import { accountExplorerUrl } from "@/lib/near/config";
 
 function shortAccount(id: string) {
@@ -19,9 +20,8 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
     {
       "/dashboard/trade": "Swap",
       "/dashboard/agents": "Agents & vaults",
-      "/dashboard/solver": "Mock solver",
       "/dashboard/settings": "Settings",
-      "/dashboard/clean-funds": "Clean funds",
+      "/dashboard/privacy": "Privacy",
     }[pathname] ?? "Overview";
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -72,10 +72,7 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-muted sm:inline-flex">
-          <span className={`h-1.5 w-1.5 rounded-full ${network === "mainnet" ? "bg-accent" : "bg-accent-2"}`} />
-          {network}
-        </span>
+        <NetworkToggle className="hidden sm:block" />
 
         <div className="relative" ref={menuRef}>
           <button

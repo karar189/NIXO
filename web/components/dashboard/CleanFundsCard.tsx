@@ -84,13 +84,13 @@ export function CleanFundsCard() {
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
               <Link
-                href="/dashboard/clean-funds#wallet"
+                href="/dashboard/privacy#wallet"
                 className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.14em] text-accent uppercase hover:text-foreground"
               >
                 {cert ? "Re-check with wallet" : "Prove with my wallet"} <ArrowUpRight className="size-3.5" />
               </Link>
               <Link
-                href="/dashboard/clean-funds#demo"
+                href="/dashboard/privacy#demo"
                 className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.14em] text-muted uppercase hover:text-foreground"
               >
                 Try Alice / Mallory demo <ArrowUpRight className="size-3.5" />

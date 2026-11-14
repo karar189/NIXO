@@ -194,7 +194,7 @@ const FEATURES: {
     label: "Clean-funds certificate",
     title: "Verdict only. No history.",
     body: "The enclave writes a 7-day certificate on NEAR. Exchanges read a boolean, never your trades.",
-    href: "/dashboard/clean-funds",
+    href: "/dashboard/privacy#clean-funds",
     cta: "Prove your funds",
     status: "live",
     Visual: VerdictVisual,

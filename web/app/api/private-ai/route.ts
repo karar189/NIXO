@@ -19,8 +19,6 @@ import {
   type AttestationCheck,
 } from "@/lib/nearai";
 
-export const runtime = "nodejs";
-
 const SAMPLES: Record<string, string> = {
   alice: "alice-clean.cert.json",
   mallory: "mallory-rejected.cert.json",

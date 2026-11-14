@@ -16,10 +16,16 @@ NIXO="${3:-nixo.testnet}"
 (cd "$ROOT/vault" && cargo near build non-reproducible-wasm)
 ARGS=$(printf '{"owner":"%s","nixo_contract":"%s"}' "$OWNER" "$NIXO")
 
+# Prefer macOS/OS keychain (faucet create-account default); fall back to ~/.near-credentials.
+SIGN_ARGS=(network-config testnet sign-with-keychain send)
+if [[ -f "${HOME}/.near-credentials/testnet/${VAULT}.json" ]]; then
+  SIGN_ARGS=(network-config testnet sign-with-legacy-keychain send)
+fi
+
 near contract deploy "$VAULT" \
   use-file "$ROOT/vault/target/near/nixo_vault.wasm" \
   with-init-call new json-args "$ARGS" \
   prepaid-gas '100.0 Tgas' attached-deposit '0 NEAR' \
-  network-config testnet sign-with-legacy-keychain send
+  "${SIGN_ARGS[@]}"
 
 near contract call-function as-read-only "$VAULT" get_config json-args '{}' network-config testnet now

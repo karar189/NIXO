@@ -3,44 +3,10 @@
 import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { NetworkSwitch } from "@/components/wallet/NetworkToggle";
 import { Card } from "@/components/dashboard/Card";
 import { ProvidersPanel } from "@/components/llm/ModelPicker";
 import type { NearNetwork } from "@/lib/near/config";
-
-function NetworkSwitch({
-  network,
-  onRequest,
-  disabled,
-}: {
-  network: NearNetwork;
-  onRequest: (next: NearNetwork) => void;
-  disabled: boolean;
-}) {
-  const mainnet = network === "mainnet";
-  return (
-    <div className="flex items-center gap-3">
-      <span className={`text-sm ${!mainnet ? "font-medium text-foreground" : "text-muted"}`}>Testnet</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={mainnet}
-        aria-label="Use mainnet"
-        disabled={disabled}
-        onClick={() => onRequest(mainnet ? "testnet" : "mainnet")}
-        className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors disabled:opacity-50 ${
-          mainnet ? "border-accent/50 bg-accent/25" : "border-line bg-surface-2"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 size-5.5 rounded-full shadow transition-all ${
-            mainnet ? "left-[calc(100%-1.5rem)] bg-accent" : "left-0.5 bg-accent-2"
-          }`}
-        />
-      </button>
-      <span className={`text-sm ${mainnet ? "font-medium text-foreground" : "text-muted"}`}>Mainnet</span>
-    </div>
-  );
-}
 
 export default function SettingsPage() {
   const { network, accountId, switchNetwork } = useWallet();

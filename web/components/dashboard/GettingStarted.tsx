@@ -2,11 +2,22 @@
 
 import { Check } from "lucide-react";
 import { useDashboardData } from "./DashboardData";
+import { useAgentSession } from "./AgentSession";
 import { Card } from "./Card";
 
 export function GettingStarted() {
   const { balance } = useDashboardData();
+  const agent = useAgentSession();
   const funded = Boolean(balance.data && balance.data.total > 0n);
+
+  const session = agent?.status?.session ?? null;
+  const hasAgent = Boolean(agent?.running || session?.mode === "agent" || (agent?.history?.decisions.length ?? 0) > 0);
+  const hasPaperTrade = Boolean(
+    (agent?.running && session?.position) || (agent?.history?.trades.length ?? 0) > 0,
+  );
+  // Live Intents swaps are mainnet-only; treat a completed paper session as the
+  // paper track, and leave "Go live" for an actual Intents fill later.
+  const wentLive = false;
 
   const steps = [
     { title: "Connect Meteor Wallet", body: "Your NEAR account is linked.", done: true },
@@ -17,11 +28,15 @@ export function GettingStarted() {
     },
     {
       title: "Create your first agent",
-      body: "Spin up a sub-account with a scoped, revocable key.",
-      done: false,
+      body: "Spin up a paper agent with an LLM-planned strategy.",
+      done: hasAgent,
     },
-    { title: "Run a paper trade", body: "Test a plan against simulated fills.", done: false },
-    { title: "Go live", body: "Let the agent execute approved plans via NEAR Intents.", done: false },
+    {
+      title: "Run a paper trade",
+      body: "Test a plan against simulated fills priced by NEAR Intents.",
+      done: hasPaperTrade,
+    },
+    { title: "Go live", body: "Let the agent execute approved plans via NEAR Intents.", done: wentLive },
   ];
   const doneCount = steps.filter((s) => s.done).length;
 

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
+import { NetworkToggle } from "@/components/wallet/NetworkToggle";
 
 const LINKS = [
   { href: "/#product", label: "Product" },
   { href: "/#how", label: "How it works" },
   { href: "/#privacy", label: "Privacy" },
-  { href: "/private-ai", label: "Private AI" },
+  { href: "/dashboard/privacy", label: "Privacy" },
   { href: "/verify", label: "Verify" },
 ];
 
@@ -26,7 +27,8 @@ export function SiteNav() {
             </li>
           ))}
         </ul>
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <NetworkToggle />
           <ConnectButton />
         </div>
       </nav>
@@ -55,7 +57,7 @@ export function SiteFooter() {
             <div className="flex flex-col gap-3">
               <p className="kicker">App</p>
               <Link href="/dashboard" className="text-sm text-muted hover:text-accent">Dashboard</Link>
-              <Link href="/private-ai" className="text-sm text-muted hover:text-accent">Private AI</Link>
+              <Link href="/dashboard/privacy" className="text-sm text-muted hover:text-accent">Privacy</Link>
               <Link href="/verify" className="text-sm text-muted hover:text-accent">Exchange view</Link>
             </div>
           </div>

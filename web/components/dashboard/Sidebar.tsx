@@ -9,11 +9,9 @@ import {
   Eye,
   KeyRound,
   LayoutDashboard,
-  Lock,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-  Route,
   Settings,
   ShieldCheck,
   X,
@@ -26,10 +24,8 @@ type NavItem = { href: string; label: string; icon: LucideIcon; hint?: string; s
 const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/trade", label: "Swap", icon: CandlestickChart, hint: "Confidential Intents" },
-  { href: "/dashboard/clean-funds", label: "Clean funds", icon: ShieldCheck, hint: "NIXO certificate" },
-  { href: "/private-ai", label: "Private AI", icon: Lock, hint: "NEAR AI Cloud · TEE note" },
+  { href: "/dashboard/privacy", label: "Privacy", icon: ShieldCheck, hint: "Certificate · AI · solver" },
   { href: "/dashboard/agents", label: "Agents & vaults", icon: Bot, hint: "On-chain vault + experiment" },
-  { href: "/dashboard/solver", label: "Mock solver", icon: Route, hint: "Fail-closed is_clean gate" },
   { href: "/dashboard/keys", label: "Viewing keys", icon: KeyRound, hint: "Sell access to trades", soon: true },
 ];
 
