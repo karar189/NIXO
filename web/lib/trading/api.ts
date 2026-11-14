@@ -17,6 +17,8 @@ export type Market = {
   liveContract: string | null;
   liveEnabled: boolean;
   maxLeverage: number;
+  /** The autonomous live agent can trade this market spot on NEAR mainnet. */
+  agentLive: boolean;
 };
 
 export type Ticker = { symbol: string; price: number; change_pct: number; high: number; low: number; quote_volume: number };
@@ -36,7 +38,48 @@ export type SessionConfig = {
   llm_provider: LlmChoice;
   llm_model?: string | null;
   indicators: string[];
+  /** "live" = real spot swaps on NEAR mainnet via Intents from the agent account. */
+  execution?: "paper" | "live";
 };
+
+export type LiveOrder = {
+  order_id: string;
+  side: "BUY" | "SELL";
+  symbol: string;
+  usdc_in: number;
+  status: string;
+  tx_hash: string | null;
+  tx_explorer?: string;
+  explorer: string;
+  deposit_address: string;
+  quoted_price: number;
+  price?: number;
+  mark: number;
+  error?: string;
+  created_at: number;
+};
+
+export type LiveStatus = {
+  configured: boolean;
+  enabled: boolean;
+  problems: string[];
+  account: string | null;
+  owner: string | null;
+  markets: string[];
+  caps: {
+    max_trade_usdc: number;
+    min_trade_usdc: number;
+    daily_budget_usdc: number;
+    max_slippage_bps: number;
+    max_mark_deviation_bps: number;
+  };
+  spent_24h_usdc: number;
+  confidential: boolean;
+  orders: LiveOrder[];
+  balances: (Record<string, number | string> & { account?: string; near_yocto?: string; error?: string }) | null;
+};
+
+export type LiveAuth = { account_id: string; public_key: string; signature: string; message: string; nonce: string };
 
 export type LlmProviderName = "anthropic" | "openai" | "deepseek" | "nvidia" | "nearai";
 export type LlmChoice = "auto" | "rules" | "claude" | LlmProviderName;
@@ -306,8 +349,11 @@ export const tradingApi = {
   preview: (symbol: string, side: Side, notional_usdc: number) =>
     post<{ mark: number; fill: Fill }>("/trade/preview", undefined, { symbol, side, notional_usdc }),
   analyze: (account: string, cfg: SessionConfig) => post<Analysis>("/trade/analyze", account, cfg),
-  start: (account: string, config: SessionConfig, plan_id: string | null) =>
-    post<SessionStatus>("/trade/start", account, { config, plan_id }),
+  start: (account: string, config: SessionConfig, plan_id: string | null, auth?: LiveAuth) =>
+    post<SessionStatus>("/trade/start", account, { config, plan_id, auth: auth ?? null }),
+  liveStatus: () => call<LiveStatus>("/trade/live/status"),
+  liveChallenge: (account: string, symbol: string, amount_usdc: number) =>
+    post<{ message: string; recipient: string; nonce: string }>("/trade/live/challenge", account, { symbol, amount_usdc }),
   manual: (account: string, order: ManualOrder) => post<SessionStatus>("/trade/manual", account, order),
   stop: (account: string, closePosition = true) =>
     post<SessionStatus>(`/trade/stop?close_position=${closePosition}`, account),

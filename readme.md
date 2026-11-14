@@ -261,9 +261,21 @@ Missing / expired / warn / rejected / RPC failure → refuse. Only a currently v
 | `/dashboard/trade` | Paper order form + live NEAR/USDC spot via Intents / 1Click; agent setup modal and session |
 | `/dashboard/markets` | Market list, per-symbol detail, asset swap panel, token icons |
 | `/dashboard/news` | Aggregated desk news via `GET /api/news` |
-| Agents trading engine | FastAPI `routers/trading.py` + planner/engine — dry-run quotes by default |
+| Agents trading engine | FastAPI `routers/trading.py` + planner/engine — dry-run quotes by default; optional **live** execution |
 
 Confidential Intents live swaps may require `ONECLICK_JWT` (see `.env.example`).
+
+### Live AI agent on NEAR Intents (mainnet, real funds)
+
+Configure AI agent → Execution → **Live**. The agent's decisions become real spot swaps through 1Click from one dedicated agent account ([`agents/app/live/`](agents/app/live/)):
+
+1. Long signal → real 1Click quote (USDC → NEAR / nBTC / bridged ETH, `ORIGIN_CHAIN`). Exit → sell the exact amount it bought. Shorts are skipped and leverage is fixed at 1x, because Intents settles spot swaps. SOL has no NEAR-chain token, so it stays paper-only.
+2. The quote's recipient and refund address must be the agent account. A quote more than `NIXO_LIVE_MAX_DEVIATION_BPS` worse than the Binance mark is refused.
+3. The service signs one transaction from the agent account (register the deposit address if needed, then `ft_transfer` the exact amount), submits the hash to 1Click and polls until `SUCCESS` / `REFUNDED` / `FAILED`. Fills use the amounts actually settled.
+4. Guardrails: kill switch (`NIXO_LIVE_ENABLED`), per-trade cap, rolling 24h budget, market allowlist, gas reserve, one live session at a time, and `Stop` waits for an in-flight swap rather than abandoning it. Every order goes to `agents/.nixo_live/orders.jsonl` and shows on the desk with nearblocks and Intents explorer links.
+5. Only `NIXO_AGENT_OWNER` can start it. The wallet signs a NEP-413 message naming the market and size, bound to a single-use nonce, and the server checks it's a full-access key of that account on mainnet.
+
+Setup: create a fresh mainnet account, fund it with a little NEAR (gas) and the USDC you want the agent to trade, put its full-access key in `NIXO_AGENT_PRIVATE_KEY`, set `NIXO_AGENT_ACCOUNT`, `NIXO_AGENT_OWNER`, `NIXO_LIVE_ENABLED=1`, restart agents. Limits: the server holds a hot key (keep the balance small); sessions live in memory, so after a restart any bought asset stays in the agent account (the balance shows on the desk).
 
 ---
 
@@ -416,6 +428,7 @@ Deploy helpers: `scripts/deploy-testnet.sh`, `scripts/deploy-vault-testnet.sh`, 
 | Viewing keys / encrypted trade log | Delayed key path shipped; auditor stubbed |
 | Copy-trading keys (07) | Paid subscriptions on `copykeys/` (testnet), browser-side decryption, hash-chained feed: real. Mirrored trades: paper. Demo traders: simulated history, labelled |
 | Mock solver + fail-closed SDK | Shipped (paper fill; not a live Intents network) |
+| AI agent execution | Paper by default (1Click dry-run prices). **Live** mode: real mainnet spot swaps via 1Click from a capped agent account, owner-signed start (off unless `NIXO_LIVE_ENABLED=1`) |
 | Markets / news / trade desk | Shipped desk features (quotes/news via APIs; dry-run default for swaps) |
 | Chain Signatures cross-chain relayer | Not built (later) |
 

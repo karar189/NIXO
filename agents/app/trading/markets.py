@@ -22,6 +22,10 @@ class Market:
     live_asset: str | None = None  # NEAR-chain token for wallet-signed swaps
     live_contract: str | None = None
     max_leverage: int = 50
+    # NEAR-chain NEP-141 token the autonomous live agent trades (spot, via 1Click ORIGIN_CHAIN).
+    agent_asset: str | None = None
+    agent_contract: str | None = None
+    agent_decimals: int | None = None
 
     @property
     def pair(self) -> str:
@@ -43,6 +47,7 @@ class Market:
             "liveContract": self.live_contract,
             "liveEnabled": self.live_asset is not None,
             "maxLeverage": self.max_leverage,
+            "agentLive": self.agent_asset is not None,
         }
 
 
@@ -57,6 +62,9 @@ MARKETS: dict[str, Market] = {
             decimals=24,
             live_asset="nep141:wrap.near",
             live_contract="wrap.near",
+            agent_asset="nep141:wrap.near",
+            agent_contract="wrap.near",
+            agent_decimals=24,
         ),
         Market(
             symbol="BTC",
@@ -64,6 +72,9 @@ MARKETS: dict[str, Market] = {
             binance_symbol="BTCUSDT",
             intents_asset="nep141:nbtc.bridge.near",
             decimals=8,
+            agent_asset="nep141:nbtc.bridge.near",
+            agent_contract="nbtc.bridge.near",
+            agent_decimals=8,
         ),
         Market(
             symbol="ETH",
@@ -71,6 +82,10 @@ MARKETS: dict[str, Market] = {
             binance_symbol="ETHUSDT",
             intents_asset="nep141:eth.omft.near",
             decimals=18,
+            # Bridged ETH on NEAR (eth.omft.near is ETH on Ethereum, not holdable by a NEAR account).
+            agent_asset="nep141:eth.bridge.near",
+            agent_contract="eth.bridge.near",
+            agent_decimals=18,
         ),
         Market(
             symbol="SOL",

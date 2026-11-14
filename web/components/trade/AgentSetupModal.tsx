@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Sparkles, X } from "lucide-react";
+import { useWallet } from "@/components/wallet/WalletProvider";
 import { ModelPicker, usePlannerInfo } from "@/components/llm/ModelPicker";
 import {
   INDICATORS,
   PROVIDER_SHORT,
   tradingApi,
   type Analysis,
+  type LiveStatus,
   type Market,
   type RiskProfile,
   type SessionConfig,
@@ -85,10 +87,13 @@ export function AgentSetupModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { info: planner, reload: reloadPlanner } = usePlannerInfo();
+  const { network, signMessage } = useWallet();
+  const [live, setLive] = useState<LiveStatus | null>(null);
 
   useEffect(() => {
     if (!open) return;
     void reloadPlanner();
+    tradingApi.liveStatus().then(setLive).catch(() => setLive(null));
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !loading && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -102,6 +107,23 @@ export function AgentSetupModal({
     setCfg((c) => ({ ...c, ...patch }));
     setAnalysis(null); // any change invalidates the plan
   };
+  const isLive = cfg.execution === "live";
+  const cap = live?.caps.max_trade_usdc ?? 0;
+  // Why the live option can't be used right now (first reason wins), or null if it can.
+  const liveBlocker = !live
+    ? "Live status unavailable"
+    : !live.configured || !live.enabled
+      ? `Not enabled on this server: ${live.problems.join("; ")}`
+      : network !== "mainnet"
+        ? "Switch your wallet to mainnet (NEAR Intents is mainnet-only)"
+        : account !== live.owner
+          ? `Only the owner wallet (${live.owner}) can run the live agent`
+          : !live.markets.includes(cfg.symbol)
+            ? `${cfg.symbol} has no NEAR-chain token for live trading (live: ${live.markets.join(", ")})`
+            : null;
+  const liveSizeError = isLive && live && (cfg.amount_usdc > cap || cfg.amount_usdc < live.caps.min_trade_usdc)
+    ? `Per-trade size must be ${live.caps.min_trade_usdc}–${cap} USDC`
+    : null;
 
   async function fetchPlan() {
     setStep(1);
@@ -121,7 +143,20 @@ export function AgentSetupModal({
     setLoading(true);
     setError(null);
     try {
-      await tradingApi.start(account, cfg, analysis.plan_id);
+      if (isLive) {
+        // The owner proves this exact session (market + size) with a NEP-413 signature: no gas, no transaction.
+        const ch = await tradingApi.liveChallenge(account, cfg.symbol, cfg.amount_usdc);
+        const signed = await signMessage({ message: ch.message, recipient: ch.recipient, nonceB64: ch.nonce });
+        await tradingApi.start(account, cfg, analysis.plan_id, {
+          account_id: signed.accountId,
+          public_key: signed.publicKey,
+          signature: signed.signature,
+          message: ch.message,
+          nonce: ch.nonce,
+        });
+      } else {
+        await tradingApi.start(account, cfg, analysis.plan_id);
+      }
       onStarted(cfg);
       onClose();
       setStep(0);
@@ -168,11 +203,11 @@ export function AgentSetupModal({
                   </select>
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Margin (USDC)" htmlFor="cfg-amt">
+                  <Field label={isLive ? `Per trade (USDC, max ${cap})` : "Margin (USDC)"} htmlFor="cfg-amt">
                     <input id="cfg-amt" inputMode="decimal" className={`${inputCls} font-mono`} value={cfg.amount_usdc} onChange={(e) => update({ amount_usdc: Number(e.target.value) || 0 })} />
                   </Field>
-                  <Field label={`Leverage (max ${market?.maxLeverage ?? 50}x)`} htmlFor="cfg-lev">
-                    <input id="cfg-lev" type="number" min={1} max={market?.maxLeverage ?? 50} className={`${inputCls} font-mono`} value={cfg.leverage}
+                  <Field label={isLive ? "Leverage (spot: 1x)" : `Leverage (max ${market?.maxLeverage ?? 50}x)`} htmlFor="cfg-lev">
+                    <input id="cfg-lev" type="number" min={1} max={market?.maxLeverage ?? 50} disabled={isLive} className={`${inputCls} font-mono disabled:opacity-60`} value={cfg.leverage}
                       onChange={(e) => update({ leverage: Math.max(1, Math.min(market?.maxLeverage ?? 50, Number(e.target.value) || 1)) })} />
                   </Field>
                 </div>
@@ -209,6 +244,7 @@ export function AgentSetupModal({
                     </Field>
                   </div>
                 )}
+                {liveSizeError && <p className="text-xs text-danger">{liveSizeError}</p>}
                 <p className="rounded-lg border border-line bg-background/50 px-3 py-2 text-xs text-muted">
                   Exposure <span className="font-mono text-foreground">{fmtUsd(cfg.amount_usdc * cfg.leverage)}</span>
                   {cfg.tp_sl_mode === "fixed" && cfg.tp_pct && cfg.sl_pct && (
@@ -248,17 +284,39 @@ export function AgentSetupModal({
                   </div>
                 </Field>
                 <Field label="Execution">
-                  <div className="space-y-2">
-                    <div className="rounded-lg border border-accent/40 bg-accent/5 px-3 py-2 text-xs">
-                      <p className="font-medium text-accent">Paper · NEAR Intents pricing</p>
+                  <div className="space-y-2" role="radiogroup" aria-label="Execution">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={!isLive}
+                      onClick={() => update({ execution: "paper" })}
+                      className={`w-full rounded-lg border px-3 py-2 text-left text-xs ${!isLive ? "border-accent/40 bg-accent/5" : "border-line hover:border-accent/30"}`}
+                    >
+                      <p className={`font-medium ${!isLive ? "text-accent" : ""}`}>Paper · NEAR Intents pricing</p>
                       <p className="mt-0.5 text-muted">Every fill is a real 1Click dry-run quote. No funds move.</p>
-                    </div>
-                    <div className="rounded-lg border border-line px-3 py-2 text-xs opacity-60">
-                      <p className="font-medium">Live agent · coming next</p>
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={isLive}
+                      disabled={Boolean(liveBlocker) && !isLive}
+                      onClick={() => update({ execution: "live", leverage: 1, amount_usdc: Math.min(cfg.amount_usdc, cap) || cap })}
+                      className={`w-full rounded-lg border px-3 py-2 text-left text-xs disabled:cursor-not-allowed disabled:opacity-60 ${isLive ? "border-danger/50 bg-danger/5" : "border-line hover:border-danger/30"}`}
+                    >
+                      <p className={`font-medium ${isLive ? "text-danger" : ""}`}>Live · NEAR Intents mainnet (real funds)</p>
                       <p className="mt-0.5 text-muted">
-                        Autonomous live execution needs agent sub-accounts with scoped keys. Until then, trade live by hand from the Order tab.
+                        {live?.account
+                          ? <>Spot swaps from <span className="font-mono text-foreground">{live.account}</span>, long-only, 1x. Cap {live.caps.max_trade_usdc} USDC/trade, {live.caps.daily_budget_usdc} USDC/24h ({live.spent_24h_usdc} used).</>
+                          : "Autonomous spot swaps through NEAR Intents from a dedicated, capped agent account."}
                       </p>
-                    </div>
+                      {liveBlocker && <p className="mt-1 text-[11px] text-warn">{liveBlocker}</p>}
+                    </button>
+                    {isLive && live?.balances && (
+                      <p className="rounded-lg border border-line bg-background/50 px-3 py-2 font-mono text-[11px] text-muted">
+                        Agent balance: {Number(live.balances.usdc ?? 0).toFixed(2)} USDC
+                        {live.markets.map((m) => ` · ${Number(live.balances?.[m] ?? 0).toPrecision(4)} ${m}`).join("")}
+                      </p>
+                    )}
                   </div>
                 </Field>
               </div>
@@ -334,14 +392,27 @@ export function AgentSetupModal({
 
           {step === 2 && analysis && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-accent/40 bg-accent/5 p-4 text-sm">
-                <p className="font-medium text-accent">Paper session</p>
-                <p className="mt-1 text-muted">Simulated positions, real NEAR Intents prices. Nothing is signed and no funds move.</p>
-              </div>
+              {isLive ? (
+                <div className="rounded-xl border border-danger/50 bg-danger/5 p-4 text-sm">
+                  <p className="font-medium text-danger">LIVE session · real funds on NEAR mainnet</p>
+                  <p className="mt-1 text-muted">
+                    The agent swaps spot through NEAR Intents from <span className="font-mono text-foreground">{live?.account}</span> without asking
+                    again: buy {cfg.symbol} with up to {cfg.amount_usdc} USDC on a long signal, sell it back on exit. Shorts are skipped. Every
+                    swap pays out to and refunds to the agent account only. Limits: {live?.caps.daily_budget_usdc} USDC per 24h, quotes more than{" "}
+                    {live?.caps.max_mark_deviation_bps} bps worse than the market are refused. Stop any time with Stop.
+                  </p>
+                  <p className="mt-2 text-[11px] text-muted">Your wallet will ask you to sign a message proving you own {live?.owner}. No transaction, no gas.</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-accent/40 bg-accent/5 p-4 text-sm">
+                  <p className="font-medium text-accent">Paper session</p>
+                  <p className="mt-1 text-muted">Simulated positions, real NEAR Intents prices. Nothing is signed and no funds move.</p>
+                </div>
+              )}
               <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
                 {[
                   ["Asset", market?.pair],
-                  ["Margin", fmtUsd(cfg.amount_usdc)],
+                  [isLive ? "Per trade" : "Margin", fmtUsd(cfg.amount_usdc)],
                   ["Leverage", `${cfg.leverage}x`],
                   ["Exposure", fmtUsd(cfg.amount_usdc * cfg.leverage)],
                   ["Risk", cfg.risk_profile],
@@ -367,7 +438,7 @@ export function AgentSetupModal({
             Back
           </button>
           {step === 0 && (
-            <button type="button" onClick={fetchPlan} disabled={!(cfg.amount_usdc > 0)} className="rounded-full bg-accent px-5 py-2 text-sm font-medium text-background disabled:opacity-50">
+            <button type="button" onClick={fetchPlan} disabled={!(cfg.amount_usdc > 0) || (isLive && (Boolean(liveBlocker) || Boolean(liveSizeError)))} className="rounded-full bg-accent px-5 py-2 text-sm font-medium text-background disabled:opacity-50">
               Get AI plan →
             </button>
           )}
@@ -377,8 +448,9 @@ export function AgentSetupModal({
             </button>
           )}
           {step === 2 && (
-            <button type="button" onClick={run} disabled={loading} className="rounded-full bg-accent px-5 py-2 text-sm font-medium text-background disabled:opacity-50">
-              {loading ? "Starting…" : "Start paper agent"}
+            <button type="button" onClick={run} disabled={loading || (isLive && Boolean(liveBlocker))}
+              className={`rounded-full px-5 py-2 text-sm font-medium disabled:opacity-50 ${isLive ? "bg-danger text-white" : "bg-accent text-background"}`}>
+              {loading ? (isLive ? "Waiting for signature…" : "Starting…") : isLive ? "Sign & start LIVE agent" : "Start paper agent"}
             </button>
           )}
         </footer>

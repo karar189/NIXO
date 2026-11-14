@@ -17,6 +17,7 @@ from typing import Callable, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.live.executor import LiveError, live_agent
 from app.trading import analysis, market_data, oneclick, planner, risk, signals
 from app.trading.market_data import Candle, MarketDataError
 from app.trading.markets import Market, get_market
@@ -27,6 +28,7 @@ log = logging.getLogger(__name__)
 PLAN_TTL_SECONDS = 15 * 60
 CANDLE_REFRESH_SECONDS = 30
 COOLDOWN_SECONDS = 30
+LIVE_RETRY_SECONDS = 30  # back-off after a live order fails
 CANDLE_LIMIT = 300
 
 
@@ -50,6 +52,8 @@ class SessionConfig(BaseModel):
     llm_model: str | None = Field(None, max_length=128, pattern=r"^[A-Za-z0-9._:/@-]+$",
                                   description="Model override for the chosen provider")
     indicators: list[str] = Field(default_factory=list)
+    # "live" = real spot swaps on NEAR mainnet through Intents from the agent account (1x, long-only).
+    execution: Literal["paper", "live"] = "paper"
 
 
 class ManualOrder(BaseModel):
@@ -113,6 +117,9 @@ class Session:
     ended_reason: str | None = None
     # Set on a follower's position opened by the copy-trade mirror: (trader, trader's session id).
     copy_of: tuple[str, str] | None = None
+    stopping: bool = False
+    live_inflight: bool = False
+    live_retry_at: float = 0.0
 
 
 def _now_iso() -> str:
@@ -183,6 +190,14 @@ class Engine:
     async def start_agent(self, account: str, cfg: SessionConfig, plan_id: str | None) -> Session:
         self._assert_idle(account)
         market = _market(cfg.symbol)
+        if cfg.execution == "live":
+            try:
+                live_agent.check_session(account=account, symbol=market.symbol, leverage=cfg.leverage,
+                                         amount_usdc=cfg.amount_usdc)
+            except LiveError as err:
+                raise EngineError(str(err), 403) from err
+            if any(s.running and s.config.execution == "live" for s in self.sessions.values()):
+                raise EngineError("A live agent session is already running", 409)
         plan = self.book(account).plans.get(plan_id or "")
         fresh = plan and plan["symbol"] == market.symbol and time.time() - plan["created_at"] < PLAN_TTL_SECONDS
         if not fresh:
@@ -193,7 +208,12 @@ class Engine:
                   f"(lookback {sp['lookback']}, threshold {sp['threshold']:.4g}), "
                   f"${cfg.amount_usdc:,.2f} margin at {cfg.leverage:g}x, planner: {plan['planner']}"
                   + (f" ({plan['planner_model']})" if plan.get("planner_model") else ""))
-        self._log(session, "info", "Fills are priced by NEAR Intents 1Click dry-run quotes (no funds move).")
+        if cfg.execution == "live":
+            self._log(session, "warn", f"LIVE: real spot swaps on NEAR mainnet through Intents from {live_agent.account}. "
+                      f"Long-only, 1x; short signals are skipped. Cap {live_agent.cfg.live_max_trade_usdc:g} USDC/trade, "
+                      f"{live_agent.cfg.live_daily_budget_usdc:g} USDC/24h.")
+        else:
+            self._log(session, "info", "Fills are priced by NEAR Intents 1Click dry-run quotes (no funds move).")
         self.sessions[account] = session
         session.task = asyncio.create_task(self._run(session))
         return session
@@ -235,10 +255,17 @@ class Engine:
 
     async def stop(self, account: str, close_position: bool = True) -> Session:
         session = self._require(account)
+        session.stopping = True  # no new orders from the tick loop
+        while session.live_inflight:  # never cancel in the middle of a real swap
+            await asyncio.sleep(0.25)
         if session.task and not session.task.done():
             session.task.cancel()
         if close_position and session.position:
+            session.live_retry_at = 0.0
             await self._close(session, session.last_price or session.position.entry_price, "STOPPED")
+            if session.position and session.config.execution == "live":
+                self._log(session, "warn", f"Live position was NOT sold; the {session.market.symbol} stays in "
+                          f"{live_agent.account}.")
         self._end(session, "stopped by user")
         return session
 
@@ -286,6 +313,8 @@ class Engine:
             pass
 
     async def _tick(self, session: Session) -> None:
+        if session.stopping:
+            return
         market = session.market
         mark = await market_data.get_price(market.binance_symbol)
         session.last_price = mark
@@ -334,6 +363,8 @@ class Engine:
             action, reason = "OPEN_LONG", f"{detail} > {th:.4g}"
         elif not pos and value < -th:
             action, reason = "OPEN_SHORT", f"{detail} < -{th:.4g}"
+            if session.config.execution == "live":
+                action, reason = "HOLD", f"{detail} < -{th:.4g}; short skipped (live agent is spot, long-only)"
         elif pos and pos.side == "LONG" and value < -th:
             action, reason = "CLOSE", f"signal reversed: {detail}"
         elif pos and pos.side == "SHORT" and value > th:
@@ -407,13 +438,24 @@ class Engine:
                 session.cooldown_until = time.time() + COOLDOWN_SECONDS
             return
 
-        notional = margin * cfg.leverage
-        if side == "LONG":
-            fill = await oneclick.paper_buy(session.market, notional, mark)
-            entry_usdc = notional
+        if cfg.execution == "live":
+            if side != "LONG":
+                self._log(session, "warn", "Live agent is spot, long-only: short not opened.")
+                return
+            margin = min(margin, live_agent.cfg.live_max_trade_usdc)
+            fill = await self._live_exec(session, f"OPEN_{side}",
+                                         lambda: live_agent.buy(session.market, round(margin, 6), mark))
+            if fill is None:
+                return
+            margin = notional = entry_usdc = fill.usdc
         else:
-            fill = await oneclick.paper_sell(session.market, notional / mark, mark)
-            entry_usdc = fill.usdc
+            notional = margin * cfg.leverage
+            if side == "LONG":
+                fill = await oneclick.paper_buy(session.market, notional, mark)
+                entry_usdc = notional
+            else:
+                fill = await oneclick.paper_sell(session.market, notional / mark, mark)
+                entry_usdc = fill.usdc
 
         entry = fill.price
         if manual:
@@ -439,7 +481,8 @@ class Engine:
         session.supervisor_at = time.time()
         self._record(session, f"OPEN_{side}", "filled", reason=reason, signal=signal, price=mark, fill=fill.to_dict(),
                      size_usdc=notional, leverage=cfg.leverage, tp=tp, sl=sl)
-        src = "1Click quote" if fill.source == "intents" else "mark price (1Click unavailable)"
+        src = {"intents": "1Click quote", "intents-live": "LIVE NEAR Intents swap"}.get(
+            fill.source, "mark price (1Click unavailable)")
         self._log(session, "action", f"Opened {side} {fill.qty:.6g} {session.market.symbol} @ {entry:.6g} via {src}, "
                   f"${notional:,.2f} notional ({cfg.leverage:g}x), slippage {fill.slippage_bps:+.1f} bps. "
                   f"TP {_fmt(tp)} · SL {_fmt(sl)} · Liq {_fmt(session.position.liq_price)}")
@@ -460,6 +503,14 @@ class Engine:
             fill = oneclick.Fill(price=pos.liq_price or mark, qty=pos.qty, usdc=0.0, reference_price=mark,
                                  source="reference", slippage_bps=0.0, note="Liquidated: margin lost")
             pnl = -pos.margin
+        elif session.config.execution == "live":
+            if time.time() < session.live_retry_at:
+                return
+            units = int((pos.entry_fill.get("live") or {}).get("units_out") or 0)
+            fill = await self._live_exec(session, "CLOSE", lambda: live_agent.sell(session.market, units, mark))
+            if fill is None:
+                return  # still holding; retried after LIVE_RETRY_SECONDS
+            pnl = fill.usdc - pos.entry_usdc
         else:
             if pos.side == "LONG":
                 fill = await oneclick.paper_sell(session.market, pos.qty, mark)
@@ -504,6 +555,28 @@ class Engine:
 
     def _log(self, session: Session, level: str, message: str) -> None:
         session.logs.append({"ts": _now_iso(), "level": level, "message": message})
+
+    async def _live_exec(self, session: Session, action: str, order) -> oneclick.Fill | None:
+        """Run one real swap. Shielded so a cancel can't abandon a transfer half-way."""
+        session.live_inflight = True
+        try:
+            lf = await asyncio.shield(order())
+        except Exception as err:  # LiveError, RPC or 1Click trouble: no position change
+            msg = str(err) if isinstance(err, LiveError) else f"{type(err).__name__}: {err}"
+            self._record(session, action, "rejected", reason=msg)
+            self._log(session, "error", f"Live order not filled: {msg}")
+            session.cooldown_until = time.time() + COOLDOWN_SECONDS
+            session.live_retry_at = time.time() + LIVE_RETRY_SECONDS
+            return None
+        finally:
+            session.live_inflight = False
+        self._log(session, "info", f"NEAR Intents settled: tx {lf.tx_hash[:10]}… · deposit {lf.deposit_address[:10]}…")
+        return oneclick.Fill(
+            price=lf.price, qty=lf.qty, usdc=lf.usdc, reference_price=lf.reference_price, source="intents-live",
+            slippage_bps=lf.slippage_bps,
+            live={"order_id": lf.order_id, "tx_hash": lf.tx_hash, "deposit_address": lf.deposit_address,
+                  "units_in": str(lf.units_in), "units_out": str(lf.units_out)},
+        )
 
     def _emit(self, session: Session, kind: str, data: dict) -> None:
         event = {

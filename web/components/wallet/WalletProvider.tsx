@@ -45,7 +45,11 @@ type WalletContextValue = {
   switchNetwork: (network: NearNetwork) => Promise<void>;
   /** Asks the wallet to sign and send function-call transactions, in order. */
   signAndSend: (txs: TxRequest[]) => Promise<FinalExecutionOutcome[]>;
+  /** NEP-413: sign an off-chain message with the account's key (no transaction, no gas). */
+  signMessage: (p: { message: string; recipient: string; nonceB64: string }) => Promise<SignedMessageResult>;
 };
+
+export type SignedMessageResult = { accountId: string; publicKey: string; signature: string };
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
@@ -167,6 +171,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [selector, accountId],
   );
 
+  const signMessage = useCallback(
+    async ({ message, recipient, nonceB64 }: { message: string; recipient: string; nonceB64: string }) => {
+      if (!selector || !accountId) throw new Error("Connect your wallet first");
+      const wallet = await selector.wallet();
+      if (!("signMessage" in wallet) || typeof wallet.signMessage !== "function") {
+        throw new Error("This wallet can't sign messages (NEP-413). Use Meteor, HERE or MyNearWallet.");
+      }
+      const nonce = Uint8Array.from(atob(nonceB64), (c) => c.charCodeAt(0));
+      const signed = await wallet.signMessage({ message, recipient, nonce: nonce as unknown as Buffer });
+      if (!signed) throw new Error("The wallet didn't return a signature (redirect wallets aren't supported here).");
+      return { accountId: signed.accountId, publicKey: signed.publicKey, signature: signed.signature };
+    },
+    [selector, accountId],
+  );
+
   const value = useMemo<WalletContextValue>(
     () => ({
       ready: selector !== null || error !== null,
@@ -179,8 +198,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       disconnect,
       switchNetwork,
       signAndSend,
+      signMessage,
     }),
-    [selector, network, accountId, walletName, connecting, error, connect, disconnect, switchNetwork, signAndSend],
+    [selector, network, accountId, walletName, connecting, error, connect, disconnect, switchNetwork, signAndSend, signMessage],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

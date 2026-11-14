@@ -108,6 +108,7 @@ class Fill:
     signature: str | None = None
     time_estimate_s: int | None = None
     note: str | None = None
+    live: dict | None = None  # set on real NEAR Intents fills (order id, tx hash, deposit address, raw units)
 
     def to_dict(self) -> dict:
         return asdict(self)

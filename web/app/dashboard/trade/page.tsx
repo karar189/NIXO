@@ -10,6 +10,7 @@ import { LiveSwap } from "@/components/trade/LiveSwap";
 import { PairIcons } from "@/components/trade/PairIcons";
 import { AgentSetupModal, DEFAULT_CONFIG } from "@/components/trade/AgentSetupModal";
 import { DeployCopyAgent } from "@/components/keys/DeployCopyAgent";
+import { LiveOrders } from "@/components/trade/LiveOrders";
 import { PROVIDER_SHORT, tradingApi, type Market, type SessionConfig, type Ticker } from "@/lib/trading/api";
 import { useTradingSession } from "@/lib/trading/useTradingSession";
 import { fmtPct, fmtPrice, fmtUsd, humanize, pnlTone } from "@/lib/trading/format";
@@ -81,7 +82,11 @@ export default function TradePage() {
           </span>
           {running && session ? (
             <>
-              <span className="rounded-full border border-line px-2 py-0.5 font-mono text-[11px] text-muted">PAPER DEMO</span>
+              {session.config.execution === "live" ? (
+                <span className="rounded-full border border-danger/50 bg-danger/10 px-2 py-0.5 font-mono text-[11px] text-danger">LIVE · MAINNET</span>
+              ) : (
+                <span className="rounded-full border border-line px-2 py-0.5 font-mono text-[11px] text-muted">PAPER DEMO</span>
+              )}
               <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-accent">
                 <span className={`h-1.5 w-1.5 rounded-full bg-accent ${session.paused ? "" : "animate-pulse"}`} />
                 {session.paused ? "Paused" : session.mode === "agent" ? "Agent running" : "Position open"}
@@ -247,9 +252,13 @@ export default function TradePage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="rounded-lg border border-line bg-background/50 px-3 py-2 text-xs text-muted">
-                Demo only: leveraged paper positions priced with confidential dry quotes. No real funds.
-              </p>
+              {running && session?.config.execution === "live" ? (
+                <LiveOrders />
+              ) : (
+                <p className="rounded-lg border border-line bg-background/50 px-3 py-2 text-xs text-muted">
+                  Demo only: leveraged paper positions priced with confidential dry quotes. No real funds.
+                </p>
+              )}
               {running ? (
                 <>
                   <AgentPanel account={account} status={status} logs={logs} stats={stats} />

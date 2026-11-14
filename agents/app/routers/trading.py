@@ -5,7 +5,11 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+import time
+
 from app import llm
+from app.live import nep413
+from app.live.executor import live_agent
 from app.trading import market_data, oneclick, planner
 from app.trading.engine import EngineError, ManualOrder, SessionConfig, engine
 from app.trading.markets import MARKETS, get_market
@@ -36,6 +40,18 @@ class PreviewBody(BaseModel):
 class StartBody(BaseModel):
     config: SessionConfig
     plan_id: str | None = None
+    # Required when config.execution == "live": the owner wallet's NEP-413 signature over
+    # nep413.start_message(...) with a nonce from POST /trade/live/challenge.
+    auth: dict | None = None
+
+
+class LiveChallengeBody(BaseModel):
+    symbol: str
+    amount_usdc: float = Field(gt=0)
+
+
+_challenges = nep413.Challenges()
+_live_balances: dict = {"at": 0.0, "data": None}
 
 
 @router.get("/markets")
@@ -92,9 +108,53 @@ async def analyze(cfg: SessionConfig, x_near_account: str | None = Header(None))
         raise _wrap(err) from err
 
 
+@router.get("/live/status")
+async def live_status() -> dict:
+    """Live agent configuration, caps, recent real orders and (cached) balances. No secrets."""
+    now = time.time()
+    if live_agent.configured and now - _live_balances["at"] > 15:
+        _live_balances["data"] = await live_agent.balances()
+        _live_balances["at"] = now
+    return {**live_agent.public_status(), "balances": _live_balances["data"]}
+
+
+@router.post("/live/challenge")
+def live_challenge(body: LiveChallengeBody, x_near_account: str | None = Header(None)) -> dict:
+    """Message + single-use nonce the owner wallet signs (NEP-413) to start a live session."""
+    account_id(x_near_account)
+    if not live_agent.configured:
+        raise HTTPException(503, "Live agent is not configured: " + "; ".join(live_agent.problems()))
+    try:
+        symbol = get_market(body.symbol).symbol
+    except KeyError as err:
+        raise HTTPException(404, str(err)) from err
+    return {
+        "message": nep413.start_message(account=live_agent.account, symbol=symbol, amount_usdc=body.amount_usdc),
+        "recipient": nep413.RECIPIENT,
+        "nonce": _challenges.issue(),
+    }
+
+
 @router.post("/start")
 async def start(body: StartBody, x_near_account: str | None = Header(None)) -> dict:
     acct = account_id(x_near_account)
+    if body.config.execution == "live":
+        if not body.auth:
+            raise HTTPException(401, "Live sessions need the owner wallet's signature")
+        try:
+            symbol = get_market(body.config.symbol).symbol
+            await nep413.verify(
+                rpc=live_agent.rpc, owner=live_agent.cfg.agent_owner or "", signed=body.auth,
+                expected_message=nep413.start_message(account=live_agent.account or "", symbol=symbol,
+                                                      amount_usdc=body.config.amount_usdc),
+                challenges=_challenges,
+            )
+        except nep413.AuthError as err:
+            raise HTTPException(403, str(err)) from err
+        except KeyError as err:
+            raise HTTPException(404, str(err)) from err
+        if acct != live_agent.cfg.agent_owner:
+            raise HTTPException(403, "Header account doesn't match the live agent owner")
     try:
         await engine.start_agent(acct, body.config, body.plan_id)
     except EngineError as err:

@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -77,6 +77,26 @@ class Settings(BaseSettings):
     copy_store_dir: str | None = Field(None, validation_alias="NIXO_COPY_STORE")
     # Seed labelled demo traders (simulated history) so the leaderboard is never empty.
     copy_demo: bool = Field(True, validation_alias="NIXO_COPY_DEMO")
+
+    # ------------------------------------------------------------ live AI agent (NEAR mainnet, REAL funds)
+    # The agent trades spot through NEAR Intents (1Click) from one dedicated account whose key
+    # the service holds. Every swap's recipient and refund address is that account, so funds
+    # can only go agent -> 1Click deposit address -> back to the agent. Fund it with a small cap.
+    live_enabled: bool = Field(False, validation_alias="NIXO_LIVE_ENABLED")  # master kill switch
+    agent_account: str | None = Field(None, validation_alias="NIXO_AGENT_ACCOUNT")
+    agent_private_key: SecretStr | None = Field(None, validation_alias="NIXO_AGENT_PRIVATE_KEY")
+    # Only this wallet may start the live agent (proved with a NEP-413 signed message).
+    agent_owner: str | None = Field(None, validation_alias="NIXO_AGENT_OWNER")
+    live_rpc: str = Field("https://free.rpc.fastnear.com", validation_alias="NIXO_LIVE_RPC")
+    live_markets: str = Field("NEAR,BTC,ETH", validation_alias="NIXO_LIVE_MARKETS")
+    live_max_trade_usdc: float = Field(25.0, gt=0, validation_alias="NIXO_LIVE_MAX_TRADE_USDC")
+    live_min_trade_usdc: float = Field(1.0, gt=0, validation_alias="NIXO_LIVE_MIN_TRADE_USDC")
+    live_daily_budget_usdc: float = Field(100.0, gt=0, validation_alias="NIXO_LIVE_DAILY_BUDGET_USDC")
+    live_max_slippage_bps: int = Field(100, ge=10, le=500, validation_alias="NIXO_LIVE_MAX_SLIPPAGE_BPS")
+    # Refuse a quote whose price is this far worse than the Binance mark.
+    live_max_mark_deviation_bps: int = Field(150, ge=10, le=1000, validation_alias="NIXO_LIVE_MAX_DEVIATION_BPS")
+    live_swap_timeout_secs: float = Field(300.0, ge=30, le=1800, validation_alias="NIXO_LIVE_SWAP_TIMEOUT")
+    live_store_dir: str | None = Field(None, validation_alias="NIXO_LIVE_STORE")
 
 
 settings = Settings()

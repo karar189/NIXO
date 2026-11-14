@@ -18,3 +18,4 @@ __pycache__/
 # Runtime stores (encrypted trade logs / copy-trade feed)
 .nixo_viewing/
 .nixo_copy/
+.nixo_live/
