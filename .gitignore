@@ -2,7 +2,13 @@ node_modules/
 target/
 .next/
 .env
-.env.local
+.env.*
+!.env.example
+# Production env for the AWS/Vercel deploy: holds real keys.
+.env.deploy
+deploy/aws/.state/
+deploy/aws/.env
+deploy/aws/*.env
 *.log
 .DS_Store
 fixtures/mainnet/cache/

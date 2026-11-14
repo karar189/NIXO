@@ -1,0 +1,42 @@
+# NIXO backend on one EC2 host: agents (FastAPI) + backend (NestJS) behind Caddy,
+# which gets Let's Encrypt certificates automatically.
+#
+# Needs, next to this file (all git-ignored, written by deploy/aws/split_env.py):
+#   agents.env   agents runtime env
+#   backend.env  backend runtime env
+#
+#   docker compose up -d --build
+services:
+  agents:
+    build: ../../agents
+    restart: unless-stopped
+    env_file: agents.env
+    volumes:
+      - agents-data:/data
+    expose: ["8000"]
+
+  backend:
+    build: ../../backend
+    restart: unless-stopped
+    env_file: backend.env
+    environment:
+      BACKEND_PORT: "4000"
+    expose: ["4000"]
+
+  caddy:
+    image: caddy:2.10.2
+    restart: unless-stopped
+    depends_on: [agents, backend]
+    ports: ["80:80", "443:443"]
+    environment:
+      AGENTS_DOMAIN: ${AGENTS_DOMAIN:?set AGENTS_DOMAIN in deploy/aws/.env}
+      BACKEND_DOMAIN: ${BACKEND_DOMAIN:?set BACKEND_DOMAIN in deploy/aws/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  agents-data:
+  caddy-data:
+  caddy-config:

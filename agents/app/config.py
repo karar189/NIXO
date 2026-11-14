@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     # AGENTS_PORT (was PORT): renamed so it doesn't clash with the backend in the shared .env.
     port: int = Field(8000, validation_alias="AGENTS_PORT")
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:4000"]
+    # Shared secret the web proxy sends as X-Agents-Token. When set, every route
+    # except /health requires it, so a public deployment can't be called directly
+    # (the LLM routes spend billed provider credits). Unset: open, for local dev.
+    agents_api_token: SecretStr | None = Field(None, validation_alias="AGENTS_API_TOKEN")
 
     # Market data. The public data mirror is reachable where api.binance.com is not.
     binance_urls: list[str] = [

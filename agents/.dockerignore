@@ -1,0 +1,11 @@
+.venv
+.env
+.env.*
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.nixo_copy
+.nixo_viewing
+.nixo_live
+*.egg-info
+tests

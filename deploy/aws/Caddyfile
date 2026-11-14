@@ -1,0 +1,14 @@
+{$AGENTS_DOMAIN} {
+	encode gzip
+	# The strategy planner can take ~90 s (LLM); the web proxy waits 100 s.
+	reverse_proxy agents:8000 {
+		transport http {
+			response_header_timeout 120s
+		}
+	}
+}
+
+{$BACKEND_DOMAIN} {
+	encode gzip
+	reverse_proxy backend:4000
+}

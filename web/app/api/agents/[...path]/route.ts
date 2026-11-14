@@ -36,6 +36,10 @@ async function forward(req: Request, ctx: RouteContext<"/api/agents/[...path]">)
     const value = req.headers.get(name);
     if (value !== null) headers.set(name, value);
   }
+  // Server-only shared secret: lets a publicly reachable agents service accept
+  // only this proxy. Never exposed to the browser.
+  const token = process.env.AGENTS_API_TOKEN;
+  if (token) headers.set("x-agents-token", token);
 
   let upstream: Response;
   try {
